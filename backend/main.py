@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from . import models, database
-from .routes import auth 
+from .routes import auth, applications
 
 app = FastAPI(title="Uni-Event Portal API")
 
 app.include_router(auth.router)
+app.include_router(applications.router)
 
 @app.get("/", tags=["General"])
 def read_root():
