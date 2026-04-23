@@ -38,3 +38,11 @@ def login(
 
     token = security.create_access_token(data={"sub": user.email, "role": user.role_id})
     return {"access_token": token, "token_type": "bearer"}
+
+@router.get("/me", response_model=schemas.UserResponse)
+def get_me(
+    db: Session = Depends(database.get_db), 
+    current_user: dict = Depends(security.get_current_user)
+):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    return user

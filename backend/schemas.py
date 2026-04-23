@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
     user_id: int
     full_name: str
     email: str
+    role_id: int
 
     class Config:
         from_attributes = True

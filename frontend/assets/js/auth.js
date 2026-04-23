@@ -32,7 +32,6 @@ function showError(message) {
     errorBox.classList.remove('hidden');
 }
 
-// KAYIT İŞLEMİ
 async function handleRegister(event) {
     event.preventDefault();
     const fullName = document.getElementById('reg-name').value;

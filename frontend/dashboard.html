@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Uni-Event | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>.hidden { display: none; }</style>
+</head>
+<body class="bg-gray-50 flex min-h-screen font-sans text-gray-900">
+
+    <aside class="w-64 bg-indigo-950 text-white p-6 hidden md:flex flex-col">
+        <h1 class="text-xl font-bold mb-10 border-b border-indigo-800 pb-4">Arel Portal</h1>
+        <div class="mb-10">
+            <p id="display-name" class="font-semibold text-lg"></p>
+            <p id="display-role" class="text-xs text-indigo-300 uppercase font-bold mt-1"></p>
+        </div>
+        <button onclick="logout()" class="mt-auto bg-red-500/10 text-red-400 p-3 rounded-xl hover:bg-red-500 hover:text-white transition">Log Out</button>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        
+        <section id="student-view" class="hidden">
+            <h2 class="text-2xl font-bold mb-6">Active Clubs</h2>
+            <div id="club-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </section>
+
+        <section id="manager-view" class="hidden space-y-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border">
+                <h2 class="text-xl font-bold mb-4">Create Event</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <input type="text" id="ev-title" placeholder="Event Title" class="p-3 border rounded-lg">
+                    <textarea id="ev-desc" placeholder="Event Description" class="p-3 border rounded-lg"></textarea>
+                    <input type="text" id="ev-loc" placeholder="Location" class="p-3 border rounded-lg">
+                    <button onclick="submitEvent()" class="bg-emerald-600 text-white p-3 rounded-lg font-bold">Publish</button>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold mb-4 text-gray-700">My Events</h2>
+                <div id="my-events-list" class="space-y-4"></div>
+            </div>
+        </section>
+
+        <section id="admin-view" class="hidden">
+            <h2 class="text-2xl font-bold mb-6 text-orange-600">Pending Approvals</h2>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 font-bold">User ID</th>
+                            <th class="p-4 font-bold">Club ID</th>
+                            <th class="p-4 font-bold text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-apps-list">
+                        </tbody>
+                </table>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-12 mb-6 text-indigo-600">Pending Events</h2>
+            <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 font-bold">Title</th>
+                            <th class="p-4 font-bold">Location</th>
+                            <th class="p-4 font-bold text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-events-list">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+</body>
+</html>
