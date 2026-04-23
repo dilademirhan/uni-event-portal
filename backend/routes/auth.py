@@ -40,9 +40,15 @@ def login(
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/me", response_model=schemas.UserResponse)
-def get_me(
-    db: Session = Depends(database.get_db), 
-    current_user: dict = Depends(security.get_current_user)
-):
+def get_me(db: Session = Depends(database.get_db), current_user: dict = Depends(security.get_current_user)):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    
+    if user.role_id == 2:
+        manager_rec = db.query(models.ClubManager).filter(
+            models.ClubManager.user_id == user.user_id,
+            models.ClubManager.request_status == 1 
+        ).first()
+        if manager_rec:
+            user.managed_club_id = manager_rec.club_id
+            
     return user

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from typing import Optional
 import re
 
 class UserCreate(BaseModel):
@@ -31,6 +32,7 @@ class UserResponse(BaseModel):
     full_name: str
     email: str
     role_id: int
+    managed_club_id: Optional[int] = None
 
     class Config:
         from_attributes = True

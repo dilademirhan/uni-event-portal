@@ -1,4 +1,4 @@
-async function init() {
+let currentManagerClubId = null;async function init() {
     const user = await api.getMe();
     if (!user.user_id) return window.location.href = "index.html";
 
@@ -11,6 +11,7 @@ async function init() {
     } else if (user.role_id === 2) {
         document.getElementById('display-role').innerText = "Club Manager";
         document.getElementById('manager-view').classList.remove('hidden');
+        currentManagerClubId = user.managed_club_id;
         loadMyEvents();
     } else if (user.role_id === 3) {
         document.getElementById('display-role').innerText = "Admin";
@@ -41,7 +42,7 @@ async function submitEvent() {
     const title = document.getElementById('ev-title').value;
     const desc = document.getElementById('ev-desc').value;
     const loc = document.getElementById('ev-loc').value;
-    const res = await api.createEvent(title, desc, loc);
+    const res = await api.createEvent(title, desc, loc, currentManagerClubId);
     alert(res.message);
     loadMyEvents();
 }

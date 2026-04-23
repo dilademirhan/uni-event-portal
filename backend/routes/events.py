@@ -21,15 +21,27 @@ def create_event(
             detail="Only club managers can create events."
         )
 
+    manager_record = db.query(models.ClubManager).filter(
+        models.ClubManager.user_id == user.user_id,
+        models.ClubManager.request_status == 1 
+    ).first()
+
+    if not manager_record:
+        raise HTTPException(
+            status_code=403, 
+            detail="You are not authorized to manage any club."
+        )
+
     new_event = models.Event(
         title=title,
         description=description,
         location=location,
         event_date=datetime.now(), 
-        club_id=1,
+        club_id=manager_record.club_id, 
         creator_id=user.user_id,
-        approval_status=0 # 0: Pending
+        approval_status=0 
     )
+    
     db.add(new_event)
     db.commit()
     return {"message": "Event created successfully! Waiting for Admin approval."}

@@ -48,9 +48,9 @@ const api = {
         return await response.json();
     },
 
-    async createEvent(title, description, location) {
+    async createEvent(title, description, location,clubId) {
         const token = localStorage.getItem("access_token");
-        const url = `${API_BASE_URL}/events/create?title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+        const url = `${API_BASE_URL}/events/create?title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}&club_id=${clubId}`;
         const response = await fetch(url, {
             method: "POST",
             headers: { "Authorization": `Bearer ${token}` }
