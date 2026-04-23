@@ -56,9 +56,14 @@ def approve_event(event_id: int, approve: bool, db: Session = Depends(database.g
     if not event:
         raise HTTPException(status_code=404, detail="Event not found.")
     
-    event.approval_status = 1 if approve else 2
+    if approve:
+        event.approval_status = 1  # Approved
+    else:
+        event.approval_status = 2  # Rejected
+        event.event_state = 'Cancelled' 
+    
     db.commit()
-    return {"message": "Event approved!" if approve else "Event rejected!"}
+    return {"message": "Event approved!" if approve else "Event rejected and cancelled!"}
 
 @router.get("/my-events")
 def get_my_events(

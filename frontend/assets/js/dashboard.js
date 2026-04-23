@@ -58,9 +58,17 @@ async function loadMyEvents() {
                     <span class="mr-2">📍 ${e.location}</span>
                 </div>
             </div>
-            <span class="${e.approval_status === 1 ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50'} font-bold text-xs px-2 py-1 rounded-lg">
-                ${e.approval_status === 1 ? 'Approved' : 'Pending'}
-            </span>
+            <span class="${
+    e.approval_status === 1 ? 'text-green-600 bg-green-50' : 
+    e.approval_status === 2 ? 'text-red-600 bg-red-50' : 
+    'text-orange-600 bg-orange-50'
+} font-bold text-xs px-2 py-1 rounded-lg">
+    ${
+        e.approval_status === 1 ? 'Approved' : 
+        e.approval_status === 2 ? 'Rejected' : 
+        'Pending'
+    }
+</span>
         </div>
     `).join('');
 }
@@ -102,7 +110,7 @@ async function loadPendingEvents() {
             <td class="p-4 text-sm text-gray-600">${e.location}</td>
             <td class="p-4 text-right">
                 <button onclick="handleEventApprove(${e.event_id}, true)" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-700">Approve</button>
-                <button onclick="handleEventApprove(${e.event_id}, false)" class="bg-gray-100 text-gray-500 px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-gray-200">Reject</button>
+                <button onclick="handleEventApprove(${e.event_id}, false)" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-700 transition">Reject</button>
             </td>
         </tr>
     `).join('');
