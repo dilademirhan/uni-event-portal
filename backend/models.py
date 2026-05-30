@@ -22,6 +22,8 @@ class Club(Base):
     club_name = Column(String(150), unique=True, nullable=False)
     category = Column(String(50))
     description = Column(Text)
+    max_quota = Column(Integer, default=100)
+    max_managers = Column(Integer, default=3)
 
 class ClubManager(Base):
     __tablename__ = "Club_Managers"
@@ -30,13 +32,13 @@ class ClubManager(Base):
     user_id = Column(Integer, ForeignKey("Users.user_id", ondelete="CASCADE"))
     request_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected
     request_date = Column(DateTime, server_default=func.now())
+    application_message = Column(Text, nullable=True)
 
 class ClubMember(Base):
     __tablename__ = "Club_Members"
     membership_id = Column(Integer, primary_key=True, index=True)
     club_id = Column(Integer, ForeignKey("Clubs.club_id", ondelete="CASCADE"))
     user_id = Column(Integer, ForeignKey("Users.user_id", ondelete="CASCADE"))
-    membership_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected
     joined_at = Column(DateTime, server_default=func.now())
 
 class Event(Base):
@@ -51,11 +53,11 @@ class Event(Base):
     is_members_only = Column(Boolean, default=False)
     approval_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected
     event_state = Column(String(20), default="Upcoming")
+    max_attendees = Column(Integer, default=100)
 
 class EventRegistration(Base):
     __tablename__ = "Event_Registrations"
     registration_id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("Events.event_id", ondelete="CASCADE"))
     user_id = Column(Integer, ForeignKey("Users.user_id"))
-    registration_status = Column(Integer, default=0) # 0: Pending, 1: Approved
     registered_at = Column(DateTime, server_default=func.now())

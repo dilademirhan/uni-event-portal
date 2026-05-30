@@ -19,7 +19,9 @@ CREATE TABLE Clubs (
     club_id INT PRIMARY KEY IDENTITY(1,1),
     club_name NVARCHAR(150) NOT NULL UNIQUE,
     category NVARCHAR(50),
-    description NVARCHAR(MAX)
+    description NVARCHAR(MAX),
+    max_quota INT DEFAULT 100,
+    max_managers INT DEFAULT 3
 );
 
 -- Handles requests from users to become club representatives (Admin Approval required)
@@ -29,22 +31,21 @@ CREATE TABLE Club_Managers (
     user_id INT NOT NULL,
     request_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     request_date DATETIME DEFAULT GETDATE(),
+    application_message NVARCHAR(MAX),
     CONSTRAINT FK_Mgr_Club FOREIGN KEY (club_id) REFERENCES Clubs(club_id) ON DELETE CASCADE,
     CONSTRAINT FK_Mgr_User FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
     CONSTRAINT CHK_MgrStatus CHECK (request_status IN (0, 1, 2)),
     UNIQUE(club_id, user_id)
 );
 
--- Handles membership requests for clubs (Club Manager Approval required)
+-- Members of clubs (auto-joined if quota available)
 CREATE TABLE Club_Members (
     membership_id INT PRIMARY KEY IDENTITY(1,1),
     club_id INT NOT NULL,
     user_id INT NOT NULL,
-    membership_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     joined_at DATETIME DEFAULT GETDATE(),
     CONSTRAINT FK_Mem_Club FOREIGN KEY (club_id) REFERENCES Clubs(club_id) ON DELETE CASCADE,
     CONSTRAINT FK_Mem_User FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
-    CONSTRAINT CHK_MemStatus CHECK (membership_status IN (0, 1, 2)),
     UNIQUE(club_id, user_id)
 );
 
@@ -61,21 +62,20 @@ CREATE TABLE Events (
     -- Approval by Admin:
     approval_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     event_state NVARCHAR(20) DEFAULT 'Upcoming',
+    max_attendees INT DEFAULT 100,
     CONSTRAINT FK_Evnt_Club FOREIGN KEY (club_id) REFERENCES Clubs(club_id) ON DELETE CASCADE,
     CONSTRAINT FK_Evnt_Creator FOREIGN KEY (creator_id) REFERENCES Users(user_id),
     CONSTRAINT CHK_Evnt_Appr CHECK (approval_status IN (0, 1, 2)),
     CONSTRAINT CHK_Evnt_State CHECK (event_state IN ('Upcoming', 'Ongoing', 'Completed', 'Cancelled'))
 );
 
--- Logic: Auto-approved (status=1) if user is club member, otherwise pending (status=0)
+-- Logic: Auto-approved registration if quota available (Members only check is enforced in backend)
 CREATE TABLE Event_Registrations (
     registration_id INT PRIMARY KEY IDENTITY(1,1),
     event_id INT NOT NULL,
     user_id INT NOT NULL,
-    registration_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     registered_at DATETIME DEFAULT GETDATE(),
     CONSTRAINT FK_Reg_Evnt FOREIGN KEY (event_id) REFERENCES Events(event_id) ON DELETE CASCADE,
     CONSTRAINT FK_Reg_User FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE NO ACTION,
-    CONSTRAINT CHK_Reg_Status CHECK (registration_status IN (0, 1, 2)),
     UNIQUE(event_id, user_id)
 );
