@@ -1,4 +1,7 @@
-let currentManagerClubId = null;async function init() {
+let currentManagerClubId = null;
+let applyingClubId = null;
+
+async function init() {
     const user = await api.getMe();
     if (!user.user_id) return window.location.href = "index.html";
 
@@ -28,14 +31,31 @@ async function loadClubs() {
         <div class="bg-white p-6 rounded-xl border shadow-sm">
             <h3 class="font-bold text-lg">${c.club_name}</h3>
             <p class="text-gray-500 text-sm mb-4">${c.description || ''}</p>
-            <button onclick="apply('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition">Apply to Become a Club Manager</button>
+            <button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition">Apply to Become a Club Manager</button>
         </div>
     `).join('');
 }
 
-async function apply(clubId) {
-    const res = await api.applyForManager(clubId);
+function openApplyModal(clubId) {
+    applyingClubId = clubId;
+    document.getElementById('apply-modal').classList.remove('hidden');
+    document.getElementById('app-message').value = '';
+}
+
+function closeApplyModal() {
+    applyingClubId = null;
+    document.getElementById('apply-modal').classList.add('hidden');
+}
+
+async function submitApplication() {
+    const message = document.getElementById('app-message').value.trim();
+    if (!message) {
+        alert("Please explain why you want to become a manager.");
+        return;
+    }
+    const res = await api.applyForManager(applyingClubId, message);
     alert(res.message || res.detail);
+    closeApplyModal();
 }
 
 async function submitEvent() {

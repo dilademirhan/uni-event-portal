@@ -6,34 +6,58 @@ router = APIRouter(prefix="/applications", tags=["Applications"])
 
 @router.post("/apply-club-manager")
 def apply_club_manager(
-    club_id: int, 
+    req: schemas.ManagerApplicationRequest, 
     db: Session = Depends(database.get_db),
     current_user: dict = Depends(security.get_current_user) 
 ):
     
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
     
+    if user.role_id == 2:
+        raise HTTPException(
+            status_code=400,
+            detail="You are already a club manager. A user can only represent one club."
+        )
+
     existing_app = db.query(models.ClubManager).filter(
         models.ClubManager.user_id == user.user_id,
-        models.ClubManager.club_id == club_id
+        models.ClubManager.club_id == req.club_id
     ).first()
 
     if existing_app:
         raise HTTPException(
             status_code=400, 
-            detail="You have already applied for this club or you are already a manager."
+            detail="You have already applied for this club."
+        )
+
+    existing_pending = db.query(models.ClubManager).filter(
+        models.ClubManager.user_id == user.user_id,
+        models.ClubManager.request_status == 0 
+    ).first()
+
+    if existing_pending:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have a pending manager application. You cannot apply for another club."
+        )
+
+    if not req.application_message or not req.application_message.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Motivation message cannot be empty. Please explain why you want to be a manager."
         )
 
     new_application = models.ClubManager(
         user_id=user.user_id,
-        club_id=club_id,
-        request_status=0  # 0 = Pending 
+        club_id=req.club_id,
+        application_message=req.application_message.strip(),
+        request_status=0  # 0 = Pending
     )
     
     try:
         db.add(new_application)
         db.commit()
-        return {"message": "Your club manager application has been sent! Waiting for Admin approval."}
+        return {"message": "Your club manager application with your motivation message has been sent! Waiting for Admin approval."}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Database error occurred.")

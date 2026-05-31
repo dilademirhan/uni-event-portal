@@ -11,16 +11,10 @@ def create_event(
     description: str,
     location: str,
     db: Session = Depends(database.get_db),
-    current_user: dict = Depends(security.get_current_user)
+    current_user: dict = Depends(security.check_is_manager)
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
     
-    if user.role_id < 2:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Only club managers can create events."
-        )
-
     manager_record = db.query(models.ClubManager).filter(
         models.ClubManager.user_id == user.user_id,
         models.ClubManager.request_status == 1 
@@ -68,7 +62,7 @@ def approve_event(event_id: int, approve: bool, db: Session = Depends(database.g
 @router.get("/my-events")
 def get_my_events(
     db: Session = Depends(database.get_db),
-    current_user: dict = Depends(security.get_current_user)
+    current_user: dict = Depends(security.check_is_manager)
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
     return db.query(models.Event).filter(models.Event.creator_id == user.user_id).all()

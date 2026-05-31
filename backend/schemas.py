@@ -27,6 +27,10 @@ class UserCreate(BaseModel):
             raise ValueError('Must contain a special character.')
         return v
 
+class ManagerApplicationRequest(BaseModel):
+    club_id: int
+    application_message: str
+
 class UserResponse(BaseModel):
     user_id: int
     full_name: str

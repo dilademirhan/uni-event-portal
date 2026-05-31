@@ -39,11 +39,18 @@ const api = {
         return await response.json();
     },
 
-    async applyForManager(clubId) {
+    async applyForManager(clubId, message) {
         const token = localStorage.getItem("access_token");
-        const response = await fetch(`${API_BASE_URL}/applications/apply-club-manager?club_id=${clubId}`, {
+        const response = await fetch(`${API_BASE_URL}/applications/apply-club-manager`, {
             method: "POST",
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { 
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                club_id: parseInt(clubId),
+                application_message: message
+            })
         });
         return await response.json();
     },
