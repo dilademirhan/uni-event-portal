@@ -65,8 +65,25 @@ def apply_club_manager(
     
 @router.get("/pending", dependencies=[Depends(security.check_is_admin)])
 def get_pending_applications(db: Session = Depends(database.get_db)):
-    applications = db.query(models.ClubManager).filter(models.ClubManager.request_status == 0).all()
-    return applications
+    
+    pending_apps = (
+        db.query(models.ClubManager, models.Club.club_name)
+        .join(models.Club, models.ClubManager.club_id == models.Club.club_id)
+        .filter(models.ClubManager.request_status == 0)
+        .all()
+    )
+    
+    result = []
+    for app, club_name in pending_apps:
+        result.append({
+            "manager_id": app.manager_id,
+            "user_id": app.user_id,
+            "club_id": app.club_id,       
+            "club_name": club_name,       
+            "application_message": app.application_message 
+        })
+        
+    return result
 
 @router.put("/approve/{manager_id}", dependencies=[Depends(security.check_is_admin)])
 def approve_application(

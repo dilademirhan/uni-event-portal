@@ -95,13 +95,25 @@ async function loadMyEvents() {
 
 async function loadPendingApps() {
     const apps = await api.getPendingApplications();
-    document.getElementById('pending-apps-list').innerHTML = apps.map(a => `
-        <tr class="border-b">
-            <td class="p-4">${a.user_id}</td>
-            <td class="p-4">${a.club_id}</td>
+    const list = document.getElementById('pending-apps-list');
+    
+    if (apps.length === 0) {
+        list.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No pending applications.</td></tr>';
+        return;
+    }
+
+    list.innerHTML = apps.map(a => `
+        <tr class="border-b hover:bg-gray-50 transition">
+            <td class="p-4">
+                <span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-bold">Applicant #${a.user_id}</span>
+            </td>
+            <td class="p-4">
+                <p class="font-bold text-indigo-900">${a.club_name}</p>
+                <p class="text-black font-medium mt-1 italic">"${a.application_message}"</p>
+            </td>
             <td class="p-4 text-right">
-                <button onclick="handleApprove('${a.manager_id}', true)" class="bg-green-500 text-white px-3 py-1 rounded mr-2">Approve</button>
-                <button onclick="handleApprove('${a.manager_id}', false)" class="bg-red-500 text-white px-3 py-1 rounded">Reject</button>
+                <button onclick="handleApprove('${a.manager_id}', true)" class="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition">Approve</button>
+                <button onclick="handleApprove('${a.manager_id}', false)" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-700 transition">Reject</button>
             </td>
         </tr>
     `).join('');
