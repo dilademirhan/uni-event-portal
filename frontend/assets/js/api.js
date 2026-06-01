@@ -73,6 +73,14 @@ const api = {
         return await response.json();
     },
 
+    async getMyApplications() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/applications/me`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
+    },
+
     async getPendingApplications() {
         const token = localStorage.getItem("access_token");
         const response = await fetch(`${API_BASE_URL}/applications/pending`, {

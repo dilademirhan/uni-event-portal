@@ -1,9 +1,12 @@
 let currentManagerClubId = null;
 let applyingClubId = null;
+let currentUser = null;
+let myAppsGlobal = [];
 
 async function init() {
     const user = await api.getMe();
     if (!user.user_id) return window.location.href = "index.html";
+    currentUser = user;
 
     document.getElementById('display-name').innerText = user.full_name;
     
@@ -26,17 +29,50 @@ async function init() {
 
 async function loadClubs() {
     const clubs = await api.getClubs();
+    myAppsGlobal = await api.getMyApplications();
+    const myApps = myAppsGlobal;
     const grid = document.getElementById('club-grid');
-    grid.innerHTML = clubs.map(c => `
+    
+    grid.innerHTML = clubs.map(c => {
+        let buttonHTML = '';
+        
+        if (currentUser.role_id === 2) {
+            const approvedApp = myApps.find(a => a.request_status === 1);
+            if (approvedApp && approvedApp.club_id === c.club_id) {
+                buttonHTML = `<button disabled class="w-full py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg cursor-not-allowed">✅ You are Manager</button>`;
+            } else {
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Already Managing a Club</button>`;
+            }
+        } else {
+            const existingApp = myApps.find(a => a.club_id === c.club_id);
+            if (existingApp) {
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Application Submitted</button>`;
+            } else if (c.manager_count >= c.max_managers) {
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Manager Quota Full</button>`;
+            } else {
+                buttonHTML = `<button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition">Apply to Become a Club Manager</button>`;
+            }
+        }
+
+        return `
         <div class="bg-white p-6 rounded-xl border shadow-sm">
-            <h3 class="font-bold text-lg">${c.club_name}</h3>
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-lg">${c.club_name}</h3>
+                <span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">Managers: ${c.manager_count}/${c.max_managers}</span>
+            </div>
             <p class="text-gray-500 text-sm mb-4">${c.description || ''}</p>
-            <button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition">Apply to Become a Club Manager</button>
+            ${buttonHTML}
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function openApplyModal(clubId) {
+    const hasPending = myAppsGlobal.some(a => a.request_status === 0);
+    if (hasPending) {
+        document.getElementById('error-modal').classList.remove('hidden');
+        return;
+    }
     applyingClubId = clubId;
     document.getElementById('apply-modal').classList.remove('hidden');
     document.getElementById('app-message').value = '';
@@ -47,15 +83,19 @@ function closeApplyModal() {
     document.getElementById('apply-modal').classList.add('hidden');
 }
 
+function closeErrorModal() {
+    document.getElementById('error-modal').classList.add('hidden');
+}
+
 async function submitApplication() {
     const message = document.getElementById('app-message').value.trim();
     if (!message) {
         alert("Please explain why you want to become a manager.");
         return;
     }
-    const res = await api.applyForManager(applyingClubId, message);
-    alert(res.message || res.detail);
+    await api.applyForManager(applyingClubId, message);
     closeApplyModal();
+    loadClubs();
 }
 
 async function submitEvent() {

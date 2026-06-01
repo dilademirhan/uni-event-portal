@@ -106,3 +106,30 @@ def approve_application(
 
     db.commit()
     return {"message": msg}
+
+@router.get("/me")
+def get_my_applications(
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.get_current_user)
+):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    
+    my_apps = (
+        db.query(models.ClubManager, models.Club.club_name)
+        .join(models.Club, models.ClubManager.club_id == models.Club.club_id)
+        .filter(models.ClubManager.user_id == user.user_id)
+        .order_by(models.ClubManager.request_date.desc())
+        .all()
+    )
+    
+    result = []
+    for app, club_name in my_apps:
+        result.append({
+            "club_id": app.club_id,
+            "club_name": club_name,
+            "request_status": app.request_status,
+            "application_message": app.application_message,
+            "request_date": app.request_date
+        })
+        
+    return result
