@@ -2,6 +2,8 @@ let currentManagerClubId = null;
 let applyingClubId = null;
 let currentUser = null;
 let myAppsGlobal = [];
+let clubsGlobal = [];
+let myMembershipsGlobal = [];
 
 async function init() {
     const user = await api.getMe();
@@ -37,8 +39,10 @@ async function init() {
 
 async function loadClubs() {
     const clubs = await api.getClubs();
+    clubsGlobal = clubs;
     myAppsGlobal = await api.getMyApplications();
     const myMemberships = await api.getMyMemberships();
+    myMembershipsGlobal = myMemberships;
     
     const myApps = myAppsGlobal;
     const grid = document.getElementById('club-grid');
@@ -70,22 +74,29 @@ async function loadClubs() {
             } else if (c.member_count >= c.max_quota) {
                 joinHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Member Quota Full</button>`;
             } else {
-                joinHTML = `<button onclick="handleJoinClub('${c.club_id}')" class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">Join Club</button>`;
+                joinHTML = `<button onclick="openJoinModal('${c.club_id}')" class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">Join Club</button>`;
             }
         }
 
         return `
-        <div class="bg-white p-6 rounded-xl border shadow-sm">
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-lg">${c.club_name}</h3>
-                <div class="flex flex-col gap-1 text-right">
+        <div class="bg-white p-6 rounded-xl border shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-start gap-2">
+                    <button onclick="openJoinModal('${c.club_id}')" class="text-indigo-400 hover:text-indigo-700 transition mt-0.5" title="View Details">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+                    <h3 class="font-bold text-lg leading-tight">${c.club_name}</h3>
+                </div>
+                <div class="flex flex-col gap-1 text-right shrink-0 ml-2">
                     <span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">Managers: ${c.manager_count}/${c.max_managers}</span>
                     <span class="text-xs font-bold bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-100">Members: ${c.member_count}/${c.max_quota}</span>
                 </div>
             </div>
-            <p class="text-gray-500 text-sm mb-4">${c.description || ''}</p>
-            ${joinHTML}
-            ${buttonHTML}
+            
+            <div class="mt-auto space-y-2">
+                ${joinHTML}
+                ${buttonHTML}
+            </div>
         </div>
         `;
     }).join('');
@@ -154,6 +165,68 @@ function openApplyModal(clubId) {
 function closeApplyModal() {
     applyingClubId = null;
     document.getElementById('apply-modal').classList.add('hidden');
+}
+
+function openJoinModal(clubId) {
+    const club = clubsGlobal.find(c => c.club_id == clubId);
+    if (!club) return;
+    
+    document.getElementById('join-modal-logo').innerText = club.club_name.charAt(0).toUpperCase();
+    document.getElementById('join-modal-name').innerText = club.club_name;
+    document.getElementById('join-modal-category').innerText = club.category || "General";
+    document.getElementById('join-modal-desc').innerText = club.description || "No description provided.";
+    
+    const managersContainer = document.getElementById('join-modal-managers');
+    if (club.managers_info && club.managers_info.length > 0) {
+        managersContainer.innerHTML = club.managers_info.map(m => `
+            <div class="flex flex-col border-b pb-3 border-gray-100">
+                <span class="text-xs font-bold text-indigo-600 uppercase">Manager</span>
+                <span class="font-bold text-gray-900 mt-1">${m.name}</span>
+            </div>
+            <div class="flex flex-col border-b pb-3 border-gray-100">
+                <span class="text-xs font-bold text-indigo-600 uppercase">Manager Email</span>
+                <span class="text-sm text-indigo-700 mt-1 font-bold">${m.email}</span>
+            </div>
+        `).join('');
+    } else {
+        managersContainer.innerHTML = `
+            <div class="flex flex-col border-b pb-3 border-gray-100">
+                <span class="text-xs font-bold text-indigo-600 uppercase">Manager</span>
+                <span class="font-medium text-gray-400 mt-1 italic">No manager assigned yet</span>
+            </div>
+        `;
+    }
+    
+    const isMember = myMembershipsGlobal.find(m => m.club_id === club.club_id);
+    const confirmBtn = document.getElementById('join-modal-confirm-btn');
+    
+    if (isMember) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "✅ Joined";
+        confirmBtn.className = "flex-1 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-xl border border-indigo-100 cursor-not-allowed";
+        confirmBtn.onclick = null;
+    } else if (club.member_count >= club.max_quota) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = "Quota Full";
+        confirmBtn.className = "flex-1 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl cursor-not-allowed";
+        confirmBtn.onclick = null;
+    } else {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = "Confirm & Join";
+        confirmBtn.className = "flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg";
+        confirmBtn.onclick = async () => {
+            confirmBtn.disabled = true;
+            confirmBtn.innerText = "Joining...";
+            await handleJoinClub(clubId);
+            closeJoinModal();
+        };
+    }
+    
+    document.getElementById('join-modal').classList.remove('hidden');
+}
+
+function closeJoinModal() {
+    document.getElementById('join-modal').classList.add('hidden');
 }
 
 async function handleJoinClub(clubId) {

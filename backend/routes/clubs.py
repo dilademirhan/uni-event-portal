@@ -12,10 +12,15 @@ def get_all_clubs(db: Session = Depends(database.get_db)):
     
     result = []
     for club in clubs:
-        manager_count = db.query(models.ClubManager).filter(
+        approved_managers = db.query(models.User).join(
+            models.ClubManager, models.User.user_id == models.ClubManager.user_id
+        ).filter(
             models.ClubManager.club_id == club.club_id,
             models.ClubManager.request_status == 1
-        ).count()
+        ).all()
+        
+        managers_info = [{"name": m.full_name, "email": m.email} for m in approved_managers]
+        manager_count = len(managers_info)
         
         member_count = db.query(models.ClubMember).filter(
             models.ClubMember.club_id == club.club_id
@@ -29,7 +34,8 @@ def get_all_clubs(db: Session = Depends(database.get_db)):
             "max_quota": club.max_quota,
             "max_managers": club.max_managers,
             "manager_count": manager_count,
-            "member_count": member_count
+            "member_count": member_count,
+            "managers_info": managers_info
         })
     return result
 

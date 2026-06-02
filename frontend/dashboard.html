@@ -131,6 +131,50 @@
 
     </main>
 
+    <!-- Join Club Modal -->
+    <div id="join-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-indigo-900">Club Details</h2>
+                <button onclick="closeJoinModal()" class="text-gray-400 hover:text-red-500 transition font-bold text-xl">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <div class="flex justify-center mb-6">
+                    <div id="join-modal-logo" class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center text-3xl font-bold text-indigo-600 border-4 border-indigo-50 shadow-inner">
+                        A
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">Club Name</span>
+                        <span id="join-modal-name" class="font-bold text-gray-900 mt-1 text-lg">Club Name</span>
+                    </div>
+
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">Category</span>
+                        <span id="join-modal-category" class="font-medium text-gray-800 mt-1">Category</span>
+                    </div>
+
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">About</span>
+                        <span id="join-modal-desc" class="text-sm text-gray-950 font-medium mt-1 leading-relaxed">Description</span>
+                    </div>
+
+                    <div id="join-modal-managers" class="space-y-4 pt-2">
+                        <!-- Managers -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t bg-gray-50 flex gap-3">
+                <button onclick="closeJoinModal()" class="flex-1 py-3 text-gray-700 font-bold hover:bg-gray-200 rounded-xl transition">Cancel</button>
+                <button id="join-modal-confirm-btn" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg">Confirm & Join</button>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/api.js"></script>
     <script src="assets/js/dashboard.js"></script>
 </body>
