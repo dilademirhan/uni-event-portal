@@ -10,15 +10,23 @@ async function init() {
 
     document.getElementById('display-name').innerText = user.full_name;
     
+    if (user.role_id === 1 || user.role_id === 2) {
+        document.getElementById('sidebar-nav').classList.remove('hidden');
+    }
+    
     if (user.role_id === 1) {
         document.getElementById('display-role').innerText = "Student";
         document.getElementById('student-view').classList.remove('hidden');
         loadClubs();
     } else if (user.role_id === 2) {
         document.getElementById('display-role').innerText = "Club Manager";
+        document.getElementById('tab-manager-view').classList.remove('hidden');
+        document.getElementById('tab-manager-view').className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+        document.getElementById('tab-student-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
         document.getElementById('manager-view').classList.remove('hidden');
         currentManagerClubId = user.managed_club_id;
         loadMyEvents();
+        loadClubs(); 
     } else if (user.role_id === 3) {
         document.getElementById('display-role').innerText = "Admin";
         document.getElementById('admin-view').classList.remove('hidden');
@@ -63,6 +71,55 @@ async function loadClubs() {
             <p class="text-gray-500 text-sm mb-4">${c.description || ''}</p>
             ${buttonHTML}
         </div>
+        `;
+    }).join('');
+    
+    loadMyApplicationsTable();
+}
+
+function switchTab(tabId) {
+    document.getElementById('student-view').classList.add('hidden');
+    document.getElementById('my-apps-view').classList.add('hidden');
+    if(document.getElementById('manager-view')) document.getElementById('manager-view').classList.add('hidden');
+    
+    document.getElementById('tab-student-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    document.getElementById('tab-my-apps-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    
+    if (currentUser.role_id === 2 && document.getElementById('tab-manager-view')) {
+        document.getElementById('tab-manager-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    }
+
+    document.getElementById(tabId).classList.remove('hidden');
+    document.getElementById(`tab-${tabId}`).className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+}
+
+function loadMyApplicationsTable() {
+    const list = document.getElementById('my-apps-table-body');
+    if (!myAppsGlobal || myAppsGlobal.length === 0) {
+        list.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">You have no applications.</td></tr>';
+        return;
+    }
+
+    list.innerHTML = myAppsGlobal.map(a => {
+        let statusBadge = '';
+        if (a.request_status === 0) {
+            statusBadge = '<span class="text-yellow-600 bg-yellow-50 font-bold text-xs px-3 py-1.5 rounded-lg">⏳ Pending</span>';
+        } else if (a.request_status === 1) {
+            statusBadge = '<span class="text-emerald-600 bg-emerald-50 font-bold text-xs px-3 py-1.5 rounded-lg">✅ Approved</span>';
+        } else {
+            statusBadge = '<span class="text-red-600 bg-red-50 font-bold text-xs px-3 py-1.5 rounded-lg">❌ Rejected</span>';
+        }
+
+        const dateStr = new Date(a.request_date).toLocaleDateString('en-US', { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+
+        return `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="p-4 font-bold text-indigo-900">${a.club_name}</td>
+                <td class="p-4 text-sm text-gray-600">${dateStr}</td>
+                <td class="p-4">${statusBadge}</td>
+            </tr>
         `;
     }).join('');
 }
