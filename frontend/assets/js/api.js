@@ -39,6 +39,23 @@ const api = {
         return await response.json();
     },
 
+    async getMyMemberships() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/clubs/memberships/me`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
+    },
+
+    async joinClub(clubId) {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/clubs/${clubId}/join`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return { ok: response.ok, data: await response.json() };
+    },
+
     async applyForManager(clubId, message) {
         const token = localStorage.getItem("access_token");
         const response = await fetch(`${API_BASE_URL}/applications/apply-club-manager`, {

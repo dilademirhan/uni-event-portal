@@ -38,27 +38,39 @@ async function init() {
 async function loadClubs() {
     const clubs = await api.getClubs();
     myAppsGlobal = await api.getMyApplications();
+    const myMemberships = await api.getMyMemberships();
+    
     const myApps = myAppsGlobal;
     const grid = document.getElementById('club-grid');
     
     grid.innerHTML = clubs.map(c => {
         let buttonHTML = '';
+        let joinHTML = '';
         
         if (currentUser.role_id === 2) {
             const approvedApp = myApps.find(a => a.request_status === 1);
             if (approvedApp && approvedApp.club_id === c.club_id) {
-                buttonHTML = `<button disabled class="w-full py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg cursor-not-allowed">✅ You are Manager</button>`;
+                buttonHTML = `<button disabled class="w-full py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg cursor-not-allowed mt-2">✅ You are Manager</button>`;
             } else {
-                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Already Managing a Club</button>`;
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed mt-2">Already Managing a Club</button>`;
             }
         } else {
             const existingApp = myApps.find(a => a.club_id === c.club_id);
             if (existingApp) {
-                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Application Submitted</button>`;
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed mt-2">Application Submitted</button>`;
             } else if (c.manager_count >= c.max_managers) {
-                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Manager Quota Full</button>`;
+                buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed mt-2">Manager Quota Full</button>`;
             } else {
-                buttonHTML = `<button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition">Apply to Become a Club Manager</button>`;
+                buttonHTML = `<button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition mt-2">Apply to Become a Club Manager</button>`;
+            }
+            
+            const isMember = myMemberships.find(m => m.club_id === c.club_id);
+            if (isMember) {
+                joinHTML = `<button disabled class="w-full py-2 bg-indigo-50 text-indigo-700 font-bold rounded-lg cursor-not-allowed border border-indigo-100">✅ Joined</button>`;
+            } else if (c.member_count >= c.max_quota) {
+                joinHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Member Quota Full</button>`;
+            } else {
+                joinHTML = `<button onclick="handleJoinClub('${c.club_id}')" class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">Join Club</button>`;
             }
         }
 
@@ -66,9 +78,13 @@ async function loadClubs() {
         <div class="bg-white p-6 rounded-xl border shadow-sm">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="font-bold text-lg">${c.club_name}</h3>
-                <span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">Managers: ${c.manager_count}/${c.max_managers}</span>
+                <div class="flex flex-col gap-1 text-right">
+                    <span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">Managers: ${c.manager_count}/${c.max_managers}</span>
+                    <span class="text-xs font-bold bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-100">Members: ${c.member_count}/${c.max_quota}</span>
+                </div>
             </div>
             <p class="text-gray-500 text-sm mb-4">${c.description || ''}</p>
+            ${joinHTML}
             ${buttonHTML}
         </div>
         `;
@@ -138,6 +154,20 @@ function openApplyModal(clubId) {
 function closeApplyModal() {
     applyingClubId = null;
     document.getElementById('apply-modal').classList.add('hidden');
+}
+
+async function handleJoinClub(clubId) {
+    try {
+        const res = await api.joinClub(clubId);
+        if (res.ok) {
+            loadClubs();
+        } else {
+            alert(res.data.detail || "Failed to join club.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("An error occurred while joining the club.");
+    }
 }
 
 function closeErrorModal() {
