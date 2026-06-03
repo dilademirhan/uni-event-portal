@@ -43,6 +43,7 @@ async function loadClubs() {
     myAppsGlobal = await api.getMyApplications();
     const myMemberships = await api.getMyMemberships();
     myMembershipsGlobal = myMemberships;
+    renderMyMemberships();
     
     const myApps = myAppsGlobal;
     const grid = document.getElementById('club-grid');
@@ -106,13 +107,16 @@ async function loadClubs() {
 
 function switchTab(tabId) {
     document.getElementById('student-view').classList.add('hidden');
-    document.getElementById('my-apps-view').classList.add('hidden');
     if(document.getElementById('manager-view')) document.getElementById('manager-view').classList.add('hidden');
+    if(document.getElementById('admin-view')) document.getElementById('admin-view').classList.add('hidden');
+    document.getElementById('my-apps-view').classList.add('hidden');
+    document.getElementById('my-memberships-view').classList.add('hidden');
     
     document.getElementById('tab-student-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
     document.getElementById('tab-my-apps-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    document.getElementById('tab-my-memberships-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
     
-    if (currentUser.role_id === 2 && document.getElementById('tab-manager-view')) {
+    if (currentUser && currentUser.role_id === 2 && document.getElementById('tab-manager-view')) {
         document.getElementById('tab-manager-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
     }
 
@@ -238,9 +242,30 @@ async function handleJoinClub(clubId) {
             alert(res.data.detail || "Failed to join club.");
         }
     } catch (e) {
-        console.error(e);
-        alert("An error occurred while joining the club.");
+        alert("An error occurred");
     }
+}
+
+function renderMyMemberships() {
+    const grid = document.getElementById('my-memberships-grid');
+    const myClubs = clubsGlobal.filter(c => myMembershipsGlobal.some(m => m.club_id === c.club_id));
+    
+    if (myClubs.length === 0) {
+        grid.innerHTML = `<p class="col-span-3 text-gray-500 italic">You haven't joined any clubs yet.</p>`;
+        return;
+    }
+    
+    grid.innerHTML = myClubs.map(c => `
+        <div class="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-xl border border-indigo-100 shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
+            <h3 class="font-bold text-lg text-indigo-900 mb-2">${c.club_name}</h3>
+            <span class="text-xs font-bold text-indigo-600 uppercase mb-4">${c.category || 'General'}</span>
+            <div class="mt-auto">
+                <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 font-bold rounded-lg text-sm border border-emerald-200">
+                    ✅ Active Member
+                </span>
+            </div>
+        </div>
+    `).join('');
 }
 
 function closeErrorModal() {
