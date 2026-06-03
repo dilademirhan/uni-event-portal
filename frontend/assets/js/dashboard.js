@@ -53,8 +53,7 @@ async function loadClubs() {
         let joinHTML = '';
         
         if (currentUser.role_id === 2) {
-            const approvedApp = myApps.find(a => a.request_status === 1);
-            if (approvedApp && approvedApp.club_id === c.club_id) {
+            if (currentManagerClubId === c.club_id) {
                 buttonHTML = `<button disabled class="w-full py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg cursor-not-allowed mt-2">✅ You are Manager</button>`;
             } else {
                 buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed mt-2">Already Managing a Club</button>`;
@@ -68,7 +67,11 @@ async function loadClubs() {
             } else {
                 buttonHTML = `<button onclick="openApplyModal('${c.club_id}')" class="w-full py-2 bg-indigo-50 text-indigo-600 font-bold rounded-lg hover:bg-indigo-600 hover:text-white transition mt-2">Apply to Become a Club Manager</button>`;
             }
+        }
             
+        if (currentUser.role_id === 2 && currentManagerClubId === c.club_id) {
+            joinHTML = '';
+        } else {
             const isMember = myMemberships.find(m => m.club_id === c.club_id);
             if (isMember) {
                 joinHTML = `<button disabled class="w-full py-2 bg-indigo-50 text-indigo-700 font-bold rounded-lg cursor-not-allowed border border-indigo-100">✅ Joined</button>`;
