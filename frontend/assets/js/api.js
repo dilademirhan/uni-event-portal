@@ -130,5 +130,13 @@ const api = {
             headers: { "Authorization": `Bearer ${token}` }
         });
         return await response.json();
+    },
+
+    async getUpcomingEvents() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/upcoming`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
     }
 };

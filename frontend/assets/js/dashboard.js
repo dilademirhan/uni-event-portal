@@ -18,17 +18,16 @@ async function init() {
     
     if (user.role_id === 1) {
         document.getElementById('display-role').innerText = "Student";
-        document.getElementById('student-view').classList.remove('hidden');
         loadClubs();
+        loadUpcomingEvents();
     } else if (user.role_id === 2) {
         document.getElementById('display-role').innerText = "Club Manager";
         document.getElementById('tab-manager-view').classList.remove('hidden');
-        document.getElementById('tab-manager-view').className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
-        document.getElementById('tab-student-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
-        document.getElementById('manager-view').classList.remove('hidden');
+        document.getElementById('manager-view').classList.add('hidden');
         currentManagerClubId = user.managed_club_id;
         loadMyEvents();
         loadClubs(); 
+        loadUpcomingEvents();
     } else if (user.role_id === 3) {
         document.getElementById('display-role').innerText = "Admin";
         document.getElementById('admin-view').classList.remove('hidden');
@@ -114,17 +113,24 @@ function switchTab(tabId) {
     if(document.getElementById('admin-view')) document.getElementById('admin-view').classList.add('hidden');
     document.getElementById('my-apps-view').classList.add('hidden');
     document.getElementById('my-memberships-view').classList.add('hidden');
+    document.getElementById('upcoming-events-view').classList.add('hidden');
+    document.getElementById('my-registrations-view').classList.add('hidden');
     
-    document.getElementById('tab-student-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
-    document.getElementById('tab-my-apps-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
-    document.getElementById('tab-my-memberships-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    const tabs = ['tab-student-view', 'tab-my-apps-view', 'tab-my-memberships-view', 'tab-upcoming-events-view', 'tab-my-registrations-view'];
+    tabs.forEach(t => {
+        const el = document.getElementById(t);
+        if (el) el.className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    });
     
     if (currentUser && currentUser.role_id === 2 && document.getElementById('tab-manager-view')) {
         document.getElementById('tab-manager-view').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
     }
 
     document.getElementById(tabId).classList.remove('hidden');
-    document.getElementById(`tab-${tabId}`).className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+    const activeTab = document.getElementById(`tab-${tabId}`);
+    if (activeTab) {
+        activeTab.className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+    }
 }
 
 function loadMyApplicationsTable() {
@@ -273,6 +279,49 @@ function renderMyMemberships() {
 
 function closeErrorModal() {
     document.getElementById('error-modal').classList.add('hidden');
+}
+
+async function loadUpcomingEvents() {
+    try {
+        const events = await api.getUpcomingEvents();
+        const grid = document.getElementById('upcoming-events-grid');
+        
+        if (events.length === 0) {
+            grid.innerHTML = `<p class="col-span-3 text-gray-500 italic">No upcoming events at the moment.</p>`;
+            return;
+        }
+
+        grid.innerHTML = events.map(e => `
+            <div class="bg-white p-6 rounded-xl border shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="font-bold text-lg leading-tight text-indigo-900">${e.title}</h3>
+                    <span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-4 line-clamp-3">${e.description}</p>
+                
+                <div class="space-y-2 mb-6 mt-auto">
+                    <div class="flex items-center text-xs text-gray-500 font-medium">
+                        <span class="mr-2">📍</span> ${e.location}
+                    </div>
+                    <div class="flex items-center text-xs text-gray-500 font-medium">
+                        <span class="mr-2">📅</span> ${new Date(e.event_date).toLocaleDateString()}
+                    </div>
+                    <div class="flex items-center text-xs text-gray-500 font-medium">
+                        <span class="mr-2">🏛️</span> ${e.club_name}
+                    </div>
+                </div>
+                
+                <div>
+                    <button class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                        Register for Event
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error("Failed to load upcoming events:", e);
+    }
 }
 
 async function submitApplication() {

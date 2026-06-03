@@ -66,3 +66,39 @@ def get_my_events(
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
     return db.query(models.Event).filter(models.Event.creator_id == user.user_id).all()
+
+@router.get("/upcoming")
+def get_upcoming_events(
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.get_current_user)
+):
+    events = db.query(
+        models.Event, 
+        models.Club.club_name
+    ).join(
+        models.Club, models.Event.club_id == models.Club.club_id
+    ).filter(
+        models.Event.approval_status == 1
+    ).all()
+    
+    result = []
+    for event, club_name in events:
+        event_dict = {
+            "event_id": event.event_id,
+            "title": event.title,
+            "description": event.description,
+            "location": event.location,
+            "event_date": event.event_date.isoformat() if event.event_date else None,
+            "club_id": event.club_id,
+            "club_name": club_name
+        }
+        result.append(event_dict)
+    return result
+
+@router.get("/registrations/me")
+def get_my_registrations(
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.get_current_user)
+):
+    # Placeholder for Issue 35
+    return []
