@@ -49,6 +49,8 @@ class Event(Base):
     title = Column(String(200), nullable=False)
     description = Column(Text)
     event_date = Column(DateTime, nullable=False)
+    event_end_date = Column(DateTime, nullable=True)
+    category = Column(String(50), nullable=True)
     location = Column(String(255))
     is_members_only = Column(Boolean, default=False)
     approval_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected

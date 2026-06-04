@@ -57,6 +57,8 @@ CREATE TABLE Events (
     title NVARCHAR(200) NOT NULL,
     description NVARCHAR(MAX),
     event_date DATETIME NOT NULL,
+    event_end_date DATETIME,
+    category NVARCHAR(50),
     location NVARCHAR(255),
     is_members_only BIT DEFAULT 0, -- 0: Public, 1: Members Only
     -- Approval by Admin:

@@ -10,6 +10,11 @@ def create_event(
     title: str,
     description: str,
     location: str,
+    event_date: datetime,
+    event_end_date: datetime,
+    category: str,
+    max_attendees: int = 100,
+    is_members_only: bool = False,
     db: Session = Depends(database.get_db),
     current_user: dict = Depends(security.check_is_manager)
 ):
@@ -26,11 +31,35 @@ def create_event(
             detail="You are not authorized to manage any club."
         )
 
+    target_date_start = event_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    target_date_end = event_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+    daily_count = db.query(models.Event).filter(
+        models.Event.creator_id == user.user_id,
+        models.Event.event_date >= target_date_start,
+        models.Event.event_date <= target_date_end
+    ).count()
+
+    if daily_count >= 2:
+        raise HTTPException(status_code=400, detail="Daily limit reached: You can only schedule a maximum of 2 events per day.")
+
+    conflict = db.query(models.Event).filter(
+        models.Event.club_id == manager_record.club_id,
+        models.Event.event_date < event_end_date,
+        models.Event.event_end_date > event_date
+    ).first()
+
+    if conflict:
+        raise HTTPException(status_code=400, detail="Time conflict: Your club already has an event whose duration overlaps with this new event.")
+
     new_event = models.Event(
         title=title,
         description=description,
         location=location,
-        event_date=datetime.now(), 
+        event_date=event_date, 
+        event_end_date=event_end_date,
+        category=category,
+        max_attendees=max_attendees,
+        is_members_only=is_members_only,
         club_id=manager_record.club_id, 
         creator_id=user.user_id,
         approval_status=0 

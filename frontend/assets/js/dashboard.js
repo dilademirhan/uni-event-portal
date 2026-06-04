@@ -34,6 +34,22 @@ async function init() {
         loadPendingApps();   
         loadPendingEvents(); 
     }
+
+    // Set minimum date for event pickers to disable past dates
+    if (document.getElementById('ev-date') && document.getElementById('ev-end-date')) {
+        const nowLocal = new Date();
+        const tzOffset = nowLocal.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(nowLocal - tzOffset)).toISOString().slice(0, 16);
+        
+        document.getElementById('ev-date').min = localISOTime;
+        document.getElementById('ev-end-date').min = localISOTime;
+        
+        document.getElementById('ev-date').addEventListener('change', (e) => {
+            if (e.target.value) {
+                document.getElementById('ev-end-date').min = e.target.value;
+            }
+        });
+    }
 }
 
 async function loadClubs() {
@@ -82,14 +98,12 @@ async function loadClubs() {
         }
 
         return `
-        <div class="bg-white p-6 rounded-xl border shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
-            <div class="flex justify-between items-start mb-4">
-                <div class="flex items-start gap-2">
-                    <button onclick="openJoinModal('${c.club_id}')" class="text-indigo-400 hover:text-indigo-700 transition mt-0.5" title="View Details">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    </button>
-                    <h3 class="font-bold text-lg leading-tight">${c.club_name}</h3>
-                </div>
+        <div class="bg-white p-6 rounded-2xl border shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col relative">
+            <button onclick="openJoinModal('${c.club_id}')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="View Details">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+            <div class="flex justify-between items-start mb-4 pr-10">
+                <h3 class="font-bold text-lg leading-tight">${c.club_name}</h3>
                 <div class="flex flex-col gap-1 text-right shrink-0 ml-2">
                     <span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md">Managers: ${c.manager_count}/${c.max_managers}</span>
                     <span class="text-xs font-bold bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-100">Members: ${c.member_count}/${c.max_quota}</span>
@@ -281,6 +295,33 @@ function closeErrorModal() {
     document.getElementById('error-modal').classList.add('hidden');
 }
 
+function showCustomAlert(title, message, isSuccess = false) {
+    const modal = document.getElementById('error-modal');
+    document.getElementById('error-modal-title').innerText = title;
+    document.getElementById('error-modal-message').innerText = message;
+    
+    const iconSpan = modal.querySelector('span.text-xl');
+    const iconContainer = iconSpan.parentElement;
+    const button = modal.querySelector('button');
+    const box = modal.querySelector('.bg-white');
+    
+    if (isSuccess) {
+        iconSpan.innerText = '✅';
+        iconContainer.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 mb-4';
+        box.className = 'bg-white rounded-xl shadow-lg w-full max-w-sm p-6 text-center border-t-4 border-emerald-500';
+        button.className = 'w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold transition';
+        button.innerText = 'Great';
+    } else {
+        iconSpan.innerText = '❌';
+        iconContainer.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4';
+        box.className = 'bg-white rounded-xl shadow-lg w-full max-w-sm p-6 text-center border-t-4 border-red-500';
+        button.className = 'w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition';
+        button.innerText = 'Understood';
+    }
+    
+    modal.classList.remove('hidden');
+}
+
 async function loadUpcomingEvents() {
     try {
         const events = await api.getUpcomingEvents();
@@ -336,38 +377,136 @@ async function submitApplication() {
 }
 
 async function submitEvent() {
-    const title = document.getElementById('ev-title').value;
-    const desc = document.getElementById('ev-desc').value;
-    const loc = document.getElementById('ev-loc').value;
-    const res = await api.createEvent(title, desc, loc, currentManagerClubId);
-    alert(res.message);
-    loadMyEvents();
+    const title = document.getElementById('ev-title').value.trim();
+    const desc = document.getElementById('ev-desc').value.trim();
+    const loc = document.getElementById('ev-loc').value.trim();
+    const category = document.getElementById('ev-category').value;
+    const dateStr = document.getElementById('ev-date').value;
+    const endDateStr = document.getElementById('ev-end-date').value;
+    const maxAtt = document.getElementById('ev-quota').value || "100";
+    const isMembersOnly = document.getElementById('ev-members-only').checked;
+
+    if (!title || !desc || !loc || !dateStr || !endDateStr) {
+        showCustomAlert("Missing Fields", "Please fill in all required fields (Title, Description, Location, Start/End Dates).");
+        return;
+    }
+    
+    const eventDateObj = new Date(dateStr);
+    const eventEndDateObj = new Date(endDateStr);
+    
+    if (eventDateObj < new Date()) {
+        showCustomAlert("Invalid Date", "Event start date cannot be in the past.");
+        return;
+    }
+    if (eventEndDateObj <= eventDateObj) {
+        showCustomAlert("Invalid Time", "Event end time must be after the start time.");
+        return;
+    }
+    
+    // Convert date string directly avoiding UTC shift
+    const eventDateIso = dateStr.length === 16 ? dateStr + ":00" : dateStr;
+    const eventEndDateIso = endDateStr.length === 16 ? endDateStr + ":00" : endDateStr;
+
+    try {
+        await api.createEvent(title, desc, loc, eventDateIso, eventEndDateIso, category, maxAtt, isMembersOnly);
+        document.getElementById('create-event-modal').classList.add('hidden');
+        showCustomAlert("Success!", "Event created successfully! Waiting for Admin approval.", true);
+        document.getElementById('ev-title').value = '';
+        document.getElementById('ev-desc').value = '';
+        document.getElementById('ev-loc').value = '';
+        document.getElementById('ev-date').value = '';
+        document.getElementById('ev-end-date').value = '';
+        document.getElementById('ev-quota').value = '';
+        document.getElementById('ev-members-only').checked = false;
+        loadMyEvents();
+    } catch (e) {
+        showCustomAlert("Submission Failed", e.message);
+    }
 }
 
 async function loadMyEvents() {
     const events = await api.getMyEvents();
-    document.getElementById('my-events-list').innerHTML = events.map(e => `
-        <div class="p-4 bg-white border rounded-xl flex justify-between items-start">
-            <div class="flex-1 pr-4">
-                <p class="font-bold text-indigo-900">${e.title}</p>
-                <p class="text-sm text-gray-600 mt-1 italic leading-relaxed">${e.description || 'No description available.'}</p>
-                <div class="flex items-center mt-2 text-xs text-gray-400">
-                    <span class="mr-2">📍 ${e.location}</span>
+    
+    // The "Create Event" card that sits at the beginning of the grid
+    const createCard = `
+        <div onclick="document.getElementById('create-event-modal').classList.remove('hidden')" class="p-5 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 hover:border-indigo-400 transition min-h-[200px] group">
+            <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold group-hover:scale-110 transition mb-3">+</div>
+            <p class="font-bold text-indigo-900">Create New Event</p>
+        </div>
+    `;
+
+    document.getElementById('my-events-list').innerHTML = createCard + events.map(e => {
+        const sd = new Date(e.event_date);
+        const ed = new Date(e.event_end_date);
+        
+        const startStr = sd.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const endStr = ed.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        
+        // Escape quotes in description for JSON encoding
+        const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
+        return `
+        <div class="p-5 bg-white border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 relative group cursor-pointer" onclick="openEventDetailsModal('${e.title}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees})">
+            
+            <!-- Info Icon visible always -->
+            <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="Event Details">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+
+            <div>
+                <div class="flex justify-between items-start mb-2 pr-10">
+                    <p class="font-bold text-lg text-indigo-950 line-clamp-1">${e.title}</p>
+                </div>
+                
+                <span class="${
+            e.approval_status === 1 ? 'text-emerald-700 bg-emerald-100' : 
+            e.approval_status === 2 ? 'text-red-700 bg-red-100' : 
+            'text-orange-700 bg-orange-100'
+        } font-bold text-xs px-2 py-1 rounded-lg inline-block mb-3">
+            ${
+                e.approval_status === 1 ? 'Approved' : 
+                e.approval_status === 2 ? 'Rejected' : 
+                'Pending'
+            }
+        </span>
+                
+                <div class="space-y-2 mt-auto">
+                    <div class="flex items-center text-sm font-semibold text-indigo-800 bg-indigo-50 p-2 rounded-lg">
+                        <span class="mr-2">📅</span> ${startStr}
+                    </div>
+                    <div class="flex items-center text-sm font-semibold text-emerald-800 bg-emerald-50 p-2 rounded-lg">
+                        <span class="mr-2">📍</span> ${e.location}
+                    </div>
                 </div>
             </div>
-            <span class="${
-    e.approval_status === 1 ? 'text-green-600 bg-green-50' : 
-    e.approval_status === 2 ? 'text-red-600 bg-red-50' : 
-    'text-orange-600 bg-orange-50'
-} font-bold text-xs px-2 py-1 rounded-lg">
-    ${
-        e.approval_status === 1 ? 'Approved' : 
-        e.approval_status === 2 ? 'Rejected' : 
-        'Pending'
-    }
-</span>
         </div>
-    `).join('');
+        `;
+    }).join('');
+}
+
+function openEventDetailsModal(title, desc, loc, category, startStr, endStr, isMembersOnly, maxAtt) {
+    document.getElementById('detail-modal-title').innerText = title;
+    document.getElementById('detail-modal-desc').innerText = desc || "No description provided.";
+    document.getElementById('detail-modal-loc').innerText = loc;
+    document.getElementById('detail-modal-cat').innerText = category || "General";
+    document.getElementById('detail-modal-start').innerText = startStr;
+    document.getElementById('detail-modal-end').innerText = endStr;
+    document.getElementById('detail-modal-quota').innerText = maxAtt + " People";
+    
+    const membersOnlyBadge = document.getElementById('detail-modal-privacy');
+    if (isMembersOnly) {
+        membersOnlyBadge.innerText = "Members Only 🔒";
+        membersOnlyBadge.className = "px-3 py-1 bg-red-50 text-red-700 font-bold text-xs rounded-lg";
+    } else {
+        membersOnlyBadge.innerText = "Public 🌍";
+        membersOnlyBadge.className = "px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-lg";
+    }
+
+    document.getElementById('event-details-modal').classList.remove('hidden');
+}
+
+function closeEventDetailsModal() {
+    document.getElementById('event-details-modal').classList.add('hidden');
 }
 
 async function loadPendingApps() {

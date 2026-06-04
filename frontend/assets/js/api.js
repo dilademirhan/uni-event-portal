@@ -72,13 +72,17 @@ const api = {
         return await response.json();
     },
 
-    async createEvent(title, description, location,clubId) {
+    async createEvent(title, description, location, eventDate, eventEndDate, category, maxAttendees, isMembersOnly) {
         const token = localStorage.getItem("access_token");
-        const url = `${API_BASE_URL}/events/create?title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}&club_id=${clubId}`;
+        const url = `${API_BASE_URL}/events/create?title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}&event_date=${encodeURIComponent(eventDate)}&event_end_date=${encodeURIComponent(eventEndDate)}&category=${encodeURIComponent(category)}&max_attendees=${encodeURIComponent(maxAttendees)}&is_members_only=${encodeURIComponent(isMembersOnly)}`;
         const response = await fetch(url, {
             method: "POST",
             headers: { "Authorization": `Bearer ${token}` }
         });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to create event");
+        }
         return await response.json();
     },
 
