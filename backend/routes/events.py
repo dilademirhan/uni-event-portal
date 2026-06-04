@@ -187,5 +187,34 @@ def get_my_registrations(
     current_user: dict = Depends(security.get_current_user)
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
-    regs = db.query(models.EventRegistration).filter(models.EventRegistration.user_id == user.user_id).all()
-    return [{"event_id": r.event_id, "registered_at": r.registered_at.isoformat()} for r in regs]
+    regs = db.query(
+        models.EventRegistration, 
+        models.Event,
+        models.User.full_name.label("creator_name"),
+        models.User.email.label("creator_email")
+    ).join(
+        models.Event, models.EventRegistration.event_id == models.Event.event_id
+    ).join(
+        models.User, models.Event.creator_id == models.User.user_id
+    ).filter(
+        models.EventRegistration.user_id == user.user_id
+    ).all()
+    
+    return [
+        {
+            "event_id": r[0].event_id,
+            "registered_at": r[0].registered_at.isoformat(),
+            "title": r[1].title,
+            "description": r[1].description,
+            "category": r[1].category,
+            "is_members_only": r[1].is_members_only,
+            "max_attendees": r[1].max_attendees,
+            "location": r[1].location,
+            "event_date": r[1].event_date.isoformat(),
+            "event_end_date": r[1].event_end_date.isoformat(),
+            "creator_name": r.creator_name,
+            "creator_email": r.creator_email,
+            "computed_state": "Cancelled" if r[1].approval_status == 2 else ("Completed" if r[1].event_end_date < datetime.utcnow() else ("Ongoing" if r[1].event_date <= datetime.utcnow() <= r[1].event_end_date else "Upcoming"))
+        }
+        for r in regs
+    ]

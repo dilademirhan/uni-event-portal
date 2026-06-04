@@ -336,12 +336,48 @@ async function loadMyRegistrations() {
             return;
         }
         
-        grid.innerHTML = myRegistrationsGlobal.map(r => `
-            <div class="bg-white p-6 rounded-xl border shadow-sm">
-                <span class="text-xs font-bold text-indigo-600">Event ID: ${r.event_id}</span>
-                <p class="text-sm text-gray-500 mt-2">Registered At: ${new Date(r.registered_at).toLocaleDateString()}</p>
+        grid.innerHTML = myRegistrationsGlobal.map(r => {
+            const sd = new Date(r.event_date);
+            const startStr = sd.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            
+            let cardBgClass = 'bg-white border-gray-200 hover:shadow-indigo-200/50';
+            if (r.computed_state === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
+            else if (r.computed_state === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
+            else if (r.computed_state === 'Completed') cardBgClass = 'bg-gray-100 border-gray-400 hover:shadow-gray-300/50';
+
+            const safeDesc = (r.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            const endStr = new Date(r.event_end_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            return `
+            <div class="p-5 ${cardBgClass} border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 cursor-pointer relative group" onclick="openEventDetailsModal('${r.title.replace(/'/g, "\\'")}', '${safeDesc}', '${r.location}', '${r.category}', '${startStr}', '${endStr}', ${r.is_members_only}, ${r.max_attendees}, '${r.creator_name.replace(/'/g, "\\'")}', '${r.creator_email.replace(/'/g, "\\'")}', false)">
+                <!-- Info Icon visible always -->
+                <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="Event Details">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
+                
+                <div class="pr-10">
+                    <p class="font-bold text-lg text-indigo-950 line-clamp-1 mb-4">${r.title}</p>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center text-sm font-semibold text-indigo-800 bg-white/60 p-2 rounded-lg">
+                            <span class="mr-2">📅</span> ${startStr}
+                        </div>
+                        <div class="flex items-center text-sm font-semibold text-emerald-800 bg-white/60 p-2 rounded-lg">
+                            <span class="mr-2">📍</span> ${r.location}
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-300/50 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-600">Registered: ${new Date(r.registered_at).toLocaleDateString()}</span>
+                    ${(() => {
+                        if (r.computed_state === 'Cancelled') return '<span class="text-xs font-bold bg-red-50 text-red-700 px-3 py-1.5 rounded-lg border border-red-100 shadow-sm shrink-0">Cancelled</span>';
+                        if (r.computed_state === 'Completed') return '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm shrink-0">Completed</span>';
+                        if (r.computed_state === 'Ongoing') return '<span class="text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm shrink-0 animate-pulse">Ongoing</span>';
+                        return '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm shrink-0">Upcoming</span>';
+                    })()}
+                </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) {
         console.error(e);
     }
