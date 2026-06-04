@@ -142,5 +142,26 @@ const api = {
             headers: { "Authorization": `Bearer ${token}` }
         });
         return await response.json();
+    },
+
+    async registerForEvent(eventId) {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}/register`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to register for the event");
+        }
+        return await response.json();
+    },
+
+    async getMyRegistrations() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/registrations/me`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
     }
 };

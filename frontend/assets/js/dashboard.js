@@ -4,6 +4,9 @@ let currentUser = null;
 let myAppsGlobal = [];
 let clubsGlobal = [];
 let myMembershipsGlobal = [];
+let myRegistrationsGlobal = [];
+let campusEventsGlobal = [];
+let currentCampusFilter = 'Default';
 
 async function init() {
     const user = await api.getMe();
@@ -18,19 +21,20 @@ async function init() {
     
     if (user.role_id === 1) {
         document.getElementById('display-role').innerText = "Student";
-        loadClubs();
-        loadUpcomingEvents();
+        await loadClubs();
+        await loadUpcomingEvents();
     } else if (user.role_id === 2) {
         document.getElementById('display-role').innerText = "Club Manager";
         document.getElementById('tab-manager-view').classList.remove('hidden');
         document.getElementById('manager-view').classList.add('hidden');
         currentManagerClubId = user.managed_club_id;
         loadMyEvents();
-        loadClubs(); 
-        loadUpcomingEvents();
+        await loadClubs(); 
+        await loadUpcomingEvents();
     } else if (user.role_id === 3) {
         document.getElementById('display-role').innerText = "Admin";
         document.getElementById('admin-view').classList.remove('hidden');
+        document.getElementById('upcoming-events-view').classList.add('hidden');
         loadPendingApps();   
         loadPendingEvents(); 
     }
@@ -260,7 +264,8 @@ async function handleJoinClub(clubId) {
     try {
         const res = await api.joinClub(clubId);
         if (res.ok) {
-            loadClubs();
+            await loadClubs();
+            renderCampusEvents();
         } else {
             alert(res.data.detail || "Failed to join club.");
         }
@@ -322,46 +327,170 @@ function showCustomAlert(title, message, isSuccess = false) {
     modal.classList.remove('hidden');
 }
 
-async function loadUpcomingEvents() {
+async function loadMyRegistrations() {
     try {
-        const events = await api.getUpcomingEvents();
-        const grid = document.getElementById('upcoming-events-grid');
-        
-        if (events.length === 0) {
-            grid.innerHTML = `<p class="col-span-3 text-gray-500 italic">No upcoming events at the moment.</p>`;
+        myRegistrationsGlobal = await api.getMyRegistrations();
+        const grid = document.getElementById('my-registrations-grid');
+        if (myRegistrationsGlobal.length === 0) {
+            grid.innerHTML = '<p class="text-gray-500 italic">You have no event registrations yet.</p>';
             return;
         }
+        
+        grid.innerHTML = myRegistrationsGlobal.map(r => `
+            <div class="bg-white p-6 rounded-xl border shadow-sm">
+                <span class="text-xs font-bold text-indigo-600">Event ID: ${r.event_id}</span>
+                <p class="text-sm text-gray-500 mt-2">Registered At: ${new Date(r.registered_at).toLocaleDateString()}</p>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
 
-        grid.innerHTML = events.map(e => `
-            <div class="bg-white p-6 rounded-xl border shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
-                <div class="flex justify-between items-start mb-4">
-                    <h3 class="font-bold text-lg leading-tight text-indigo-900">${e.title}</h3>
-                    <span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>
+async function loadUpcomingEvents() {
+    try {
+        campusEventsGlobal = await api.getUpcomingEvents();
+        await loadMyRegistrations();
+        renderCampusEvents();
+    } catch (error) {
+        console.error("Failed to load campus events:", error);
+    }
+}
+
+function filterCampusEvents(filterName) {
+    currentCampusFilter = filterName;
+    
+    ['All', 'Upcoming', 'Ongoing', 'Completed', 'Cancelled'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if(btn) {
+            if(f === filterName) {
+                btn.className = "pb-3 border-b-2 font-bold text-base transition-colors border-indigo-600 text-indigo-600";
+            } else {
+                btn.className = "pb-3 border-b-2 font-bold text-base transition-colors border-transparent text-black hover:text-indigo-600 hover:border-indigo-300";
+            }
+        }
+    });
+    
+    renderCampusEvents();
+}
+
+function renderCampusEvents() {
+    const grid = document.getElementById('upcoming-events-grid');
+    const now = new Date();
+    
+    let processedEvents = campusEventsGlobal.map(e => {
+        const start = new Date(e.event_date);
+        const end = new Date(e.event_end_date);
+        let state = 'Upcoming';
+        let badgeHtml = '';
+        
+        if (e.approval_status === 2) {
+            state = 'Cancelled';
+            badgeHtml = '<span class="text-xs font-bold bg-red-50 text-red-700 px-2 py-1 rounded-md border border-red-100 shrink-0">Cancelled</span>';
+        } else if (now > end) {
+            state = 'Completed';
+            badgeHtml = '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded-md border border-gray-200 shrink-0">Completed</span>';
+        } else if (now >= start && now <= end) {
+            state = 'Ongoing';
+            badgeHtml = '<span class="text-xs font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100 shrink-0 animate-pulse">Ongoing</span>';
+        } else {
+            state = 'Upcoming';
+            badgeHtml = '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>';
+        }
+        
+        return { ...e, computedState: state, badgeHtml };
+    });
+    
+    if (currentCampusFilter !== 'All') {
+        if (currentCampusFilter === 'Default') {
+            processedEvents = processedEvents.filter(e => e.computedState === 'Upcoming' || e.computedState === 'Ongoing');
+        } else {
+            processedEvents = processedEvents.filter(e => e.computedState === currentCampusFilter);
+        }
+    }
+    
+    if (processedEvents.length === 0) {
+        grid.innerHTML = `<p class="col-span-3 text-gray-500 italic">No events found for this filter.</p>`;
+        return;
+    }
+
+    grid.innerHTML = processedEvents.map(e => {
+        const isRegistered = myRegistrationsGlobal.some(r => r.event_id === e.event_id);
+        const isMember = myMembershipsGlobal.some(m => m.club_id === e.club_id);
+        const isFull = e.current_capacity >= e.max_attendees;
+        
+        let btnHtml = '';
+        if (e.computedState === 'Completed' || e.computedState === 'Cancelled') {
+            btnHtml = `<button disabled class="w-full py-2 bg-gray-100 text-gray-400 font-bold rounded-lg cursor-not-allowed">Event ${e.computedState}</button>`;
+        } else if (isRegistered) {
+            btnHtml = `<button disabled class="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold rounded-lg cursor-not-allowed">✅ Registered</button>`;
+        } else if (e.is_members_only && !isMember) {
+            btnHtml = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed" title="You must join the club first">🔒 Members Only</button>`;
+        } else if (isFull) {
+            btnHtml = `<button disabled class="w-full py-2 bg-red-50 text-red-500 border border-red-100 font-bold rounded-lg cursor-not-allowed">Capacity Full</button>`;
+        } else {
+            btnHtml = `<button onclick="handleRegisterEvent(${e.event_id})" id="reg-btn-${e.event_id}" class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">Register for Event</button>`;
+        }
+        
+        let cardBgClass = 'bg-white border-gray-200 hover:shadow-indigo-200/50';
+        if (e.computedState === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
+        else if (e.computedState === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
+        else if (e.computedState === 'Cancelled') cardBgClass = 'bg-red-100 border-red-400 hover:shadow-red-300/50';
+        else if (e.computedState === 'Completed') cardBgClass = 'bg-gray-100 border-gray-400 hover:shadow-gray-300/50';
+
+        const startDateFormatted = new Date(e.event_date).toLocaleString([], { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+
+        return `
+            <div class="${cardBgClass} p-6 rounded-xl border shadow-md transform hover:-translate-y-2 hover:shadow-2xl transition duration-300 flex flex-col relative">
+                <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${(e.description||'').replace(/'/g, "\\'")}', '${e.location}', '${e.category}', '${startDateFormatted}', '${new Date(e.event_end_date).toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name}', '${e.creator_email}', false)" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white text-indigo-700 flex items-center justify-center transition hover:bg-indigo-700 hover:text-white shadow-sm border border-indigo-200" title="Event Details">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
+                <div class="flex justify-between items-start mb-4 pr-10">
+                    <h3 class="font-bold text-xl leading-tight text-gray-900">${e.title}</h3>
+                </div>
+                <div class="mb-4">
+                    ${e.badgeHtml}
                 </div>
                 
-                <p class="text-sm text-gray-600 mb-4 line-clamp-3">${e.description}</p>
-                
-                <div class="space-y-2 mb-6 mt-auto">
-                    <div class="flex items-center text-xs text-gray-500 font-medium">
-                        <span class="mr-2">📍</span> ${e.location}
+                <div class="space-y-3 mb-6 mt-auto">
+                    <div class="flex items-center text-xs text-gray-900 font-bold">
+                        <span class="mr-2 text-base">📍</span> ${e.location}
                     </div>
-                    <div class="flex items-center text-xs text-gray-500 font-medium">
-                        <span class="mr-2">📅</span> ${new Date(e.event_date).toLocaleDateString()}
+                    <div class="flex items-center text-xs text-gray-900 font-bold">
+                        <span class="mr-2 text-base">📅</span> ${startDateFormatted}
                     </div>
-                    <div class="flex items-center text-xs text-gray-500 font-medium">
-                        <span class="mr-2">🏛️</span> ${e.club_name}
+                    <div class="flex items-center text-xs text-gray-900 font-bold justify-between">
+                        <div><span class="mr-2 text-base">🏛️</span> ${e.club_name}</div>
+                        <div class="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">👥 ${e.current_capacity}/${e.max_attendees}</div>
                     </div>
                 </div>
                 
                 <div>
-                    <button class="w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">
-                        Register for Event
-                    </button>
+                    ${btnHtml}
                 </div>
             </div>
-        `).join('');
-    } catch (e) {
-        console.error("Failed to load upcoming events:", e);
+        `;
+    }).join('');
+}
+
+async function handleRegisterEvent(eventId) {
+    const btn = document.getElementById(`reg-btn-${eventId}`);
+    const originalText = btn.innerText;
+    try {
+        btn.disabled = true;
+        btn.innerText = "Registering...";
+        btn.classList.add("opacity-75", "cursor-not-allowed");
+        
+        await api.registerForEvent(eventId);
+        
+        await loadUpcomingEvents(); 
+    } catch (error) {
+        alert("Registration failed: " + error.message);
+        btn.disabled = false;
+        btn.innerText = originalText;
+        btn.classList.remove("opacity-75", "cursor-not-allowed");
     }
 }
 
@@ -446,8 +575,7 @@ async function loadMyEvents() {
         const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         
         return `
-        <div class="p-5 bg-white border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 relative group cursor-pointer" onclick="openEventDetailsModal('${e.title}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees})">
-            
+        <div class="p-5 bg-white border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 relative group cursor-pointer" onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, currentUser.full_name, currentUser.email, true)">
             <!-- Info Icon visible always -->
             <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="Event Details">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -458,17 +586,26 @@ async function loadMyEvents() {
                     <p class="font-bold text-lg text-indigo-950 line-clamp-1">${e.title}</p>
                 </div>
                 
-                <span class="${
-            e.approval_status === 1 ? 'text-emerald-700 bg-emerald-100' : 
-            e.approval_status === 2 ? 'text-red-700 bg-red-100' : 
-            'text-orange-700 bg-orange-100'
-        } font-bold text-xs px-2 py-1 rounded-lg inline-block mb-3">
-            ${
-                e.approval_status === 1 ? 'Approved' : 
-                e.approval_status === 2 ? 'Rejected' : 
-                'Pending'
-            }
-        </span>
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="${
+                        e.approval_status === 1 ? 'text-emerald-700 bg-emerald-100' : 
+                        e.approval_status === 2 ? 'text-red-700 bg-red-100' : 
+                        'text-orange-700 bg-orange-100'
+                    } font-bold text-xs px-2 py-1 rounded-lg shrink-0">
+                        ${
+                            e.approval_status === 1 ? 'Approved' : 
+                            e.approval_status === 2 ? 'Rejected' : 
+                            'Pending'
+                        }
+                    </span>
+                    ${(() => {
+                        const now = new Date();
+                        if (e.approval_status === 2) return '<span class="text-xs font-bold bg-red-50 text-red-700 px-2 py-1 rounded-md border border-red-100 shrink-0">Cancelled</span>';
+                        if (now > ed) return '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded-md border border-gray-200 shrink-0">Completed</span>';
+                        if (now >= sd && now <= ed) return '<span class="text-xs font-bold bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100 shrink-0 animate-pulse">Ongoing</span>';
+                        return '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>';
+                    })()}
+                </div>
                 
                 <div class="space-y-2 mt-auto">
                     <div class="flex items-center text-sm font-semibold text-indigo-800 bg-indigo-50 p-2 rounded-lg">
@@ -484,7 +621,7 @@ async function loadMyEvents() {
     }).join('');
 }
 
-function openEventDetailsModal(title, desc, loc, category, startStr, endStr, isMembersOnly, maxAtt) {
+function openEventDetailsModal(title, desc, loc, category, startStr, endStr, isMembersOnly, maxAtt, creatorName, creatorEmail, showActions) {
     document.getElementById('detail-modal-title').innerText = title;
     document.getElementById('detail-modal-desc').innerText = desc || "No description provided.";
     document.getElementById('detail-modal-loc').innerText = loc;
@@ -492,6 +629,8 @@ function openEventDetailsModal(title, desc, loc, category, startStr, endStr, isM
     document.getElementById('detail-modal-start').innerText = startStr;
     document.getElementById('detail-modal-end').innerText = endStr;
     document.getElementById('detail-modal-quota').innerText = maxAtt + " People";
+    document.getElementById('detail-modal-creator').innerText = creatorName || "Unknown";
+    document.getElementById('detail-modal-email').innerText = creatorEmail || "";
     
     const membersOnlyBadge = document.getElementById('detail-modal-privacy');
     if (isMembersOnly) {
@@ -500,6 +639,12 @@ function openEventDetailsModal(title, desc, loc, category, startStr, endStr, isM
     } else {
         membersOnlyBadge.innerText = "Public 🌍";
         membersOnlyBadge.className = "px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-lg";
+    }
+
+    if (!showActions) {
+        document.getElementById('detail-modal-buttons').classList.add('hidden');
+    } else {
+        document.getElementById('detail-modal-buttons').classList.remove('hidden');
     }
 
     document.getElementById('event-details-modal').classList.remove('hidden');

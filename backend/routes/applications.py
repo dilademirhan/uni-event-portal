@@ -99,7 +99,17 @@ def approve_application(
         app.request_status = 1
         user = db.query(models.User).filter(models.User.user_id == app.user_id).first()
         user.role_id = 2 
-        msg = "Application approved! User is now a Club Manager."
+        
+        existing_member = db.query(models.ClubMember).filter(
+            models.ClubMember.club_id == app.club_id,
+            models.ClubMember.user_id == app.user_id
+        ).first()
+        
+        if not existing_member:
+            new_member = models.ClubMember(club_id=app.club_id, user_id=app.user_id)
+            db.add(new_member)
+            
+        msg = "Application approved! User is now a Club Manager and officially a Club Member."
     else:
         app.request_status = 2
         msg = "Application rejected."

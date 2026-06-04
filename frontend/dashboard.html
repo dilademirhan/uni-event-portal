@@ -18,7 +18,7 @@
         <nav id="sidebar-nav" class="hidden flex-col space-y-2 mb-10">
             <button onclick="switchTab('upcoming-events-view')" id="tab-upcoming-events-view" class="w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                Upcoming Events
+                Campus Events
             </button>
             <button onclick="switchTab('manager-view')" id="tab-manager-view" class="hidden w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
                 <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
@@ -48,7 +48,19 @@
     <main class="flex-1 p-8 overflow-y-auto">
         
         <section id="upcoming-events-view">
-            <h2 class="text-2xl font-bold mb-6 text-indigo-950">Upcoming Events</h2>
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-indigo-950">Campus Events</h2>
+                <p class="text-base text-black mt-1 font-semibold">Discover and register for the latest events.</p>
+                
+                <!-- Underline Filter Tabs -->
+                <div class="flex border-b border-gray-300 gap-8 mt-6">
+                    <button onclick="filterCampusEvents('All')" id="filter-All" class="pb-3 border-b-2 font-bold text-base transition-colors border-transparent text-black hover:text-indigo-600">All</button>
+                    <button onclick="filterCampusEvents('Upcoming')" id="filter-Upcoming" class="pb-3 border-b-2 font-bold text-base transition-colors border-indigo-600 text-indigo-600">Upcoming</button>
+                    <button onclick="filterCampusEvents('Ongoing')" id="filter-Ongoing" class="pb-3 border-b-2 font-bold text-base transition-colors border-transparent text-black hover:text-indigo-600">Ongoing</button>
+                    <button onclick="filterCampusEvents('Completed')" id="filter-Completed" class="pb-3 border-b-2 font-bold text-base transition-colors border-transparent text-black hover:text-indigo-600">Completed</button>
+                    <button onclick="filterCampusEvents('Cancelled')" id="filter-Cancelled" class="pb-3 border-b-2 font-bold text-base transition-colors border-transparent text-black hover:text-indigo-600">Cancelled</button>
+                </div>
+            </div>
             <div id="upcoming-events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
         </section>
@@ -217,6 +229,7 @@
                     <select id="ev-category" class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
                         <option value="Workshop">Workshop</option>
                         <option value="Seminar">Seminar</option>
+                        <option value="Technology">Technology</option>
                         <option value="Trip">Trip</option>
                         <option value="Concert">Concert</option>
                         <option value="Exhibition">Exhibition</option>
@@ -290,10 +303,18 @@
                         <span class="mr-2 font-bold text-indigo-400 w-12">End:</span> <span id="detail-modal-end">Date</span>
                     </div>
                 </div>
+                
+                <div class="flex flex-col text-sm font-semibold text-gray-700 pt-3 border-t border-gray-100 gap-2">
+                    <div class="flex items-center">
+                        <span class="mr-2 text-lg">👤</span> Organized by: <span id="detail-modal-creator" class="font-bold text-indigo-600 ml-1">Creator Name</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="mr-2 text-lg">✉️</span> Mail: <span id="detail-modal-email" class="font-bold text-indigo-600 ml-1">email@example.com</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Future buttons for Edit / Cancel will go here -->
-            <div class="mt-8 flex justify-end gap-3 pt-5 border-t border-gray-100">
+            <div id="detail-modal-buttons" class="mt-8 flex justify-end gap-3 pt-5 border-t border-gray-100">
                 <button disabled title="Coming Soon" class="px-5 py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed border border-gray-200">Edit Event</button>
                 <button disabled title="Coming Soon" class="px-5 py-2.5 bg-red-50 text-red-300 font-bold rounded-xl cursor-not-allowed border border-red-100">Cancel Event</button>
             </div>
