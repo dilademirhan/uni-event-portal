@@ -127,6 +127,22 @@ const api = {
         return await response.json();
     },
 
+    async getAdminAppsHistory() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/applications/history`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
+    },
+
+    async getAdminEventsHistory() {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/history`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        return await response.json();
+    },
+
     async approveEvent(eventId, approve) {
         const token = localStorage.getItem("access_token");
         const response = await fetch(`${API_BASE_URL}/events/approve/${eventId}?approve=${approve}`, {

@@ -33,6 +33,8 @@ async function init() {
         await loadUpcomingEvents();
     } else if (user.role_id === 3) {
         document.getElementById('display-role').innerText = "Admin";
+        document.getElementById('admin-sidebar-nav').classList.remove('hidden');
+        document.getElementById('admin-sidebar-nav').classList.add('flex');
         document.getElementById('admin-view').classList.remove('hidden');
         document.getElementById('upcoming-events-view').classList.add('hidden');
         loadPendingApps();   
@@ -636,6 +638,7 @@ async function loadMyEvents() {
                     </span>
                     ${(() => {
                         const now = new Date();
+                        if (e.approval_status === 0) return '';
                         if (e.approval_status === 2) return '<span class="text-xs font-bold bg-red-50 text-red-700 px-2 py-1 rounded-md border border-red-100 shrink-0">Cancelled</span>';
                         if (now > ed) return '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded-md border border-gray-200 shrink-0">Completed</span>';
                         if (now >= sd && now <= ed) return '<span class="text-xs font-bold bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100 shrink-0 animate-pulse">Ongoing</span>';
@@ -702,23 +705,42 @@ async function loadPendingApps() {
     list.innerHTML = apps.map(a => `
         <tr class="border-b hover:bg-gray-50 transition">
             <td class="p-4">
-                <span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full font-bold">Applicant #${a.user_id}</span>
+                <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs px-3 py-1.5 rounded-full font-bold shadow-sm border border-indigo-100">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    User #${a.user_id}
+                </span>
             </td>
             <td class="p-4">
-                <p class="font-bold text-indigo-900">${a.club_name}</p>
-                <p class="text-black font-medium mt-1 italic">"${a.application_message}"</p>
+                <p class="font-bold text-gray-900">${a.club_name}</p>
+                <p class="text-gray-500 text-sm mt-1">"${a.application_message}"</p>
             </td>
             <td class="p-4 text-right">
-                <button onclick="handleApprove('${a.manager_id}', true)" class="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition">Approve</button>
-                <button onclick="handleApprove('${a.manager_id}', false)" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-700 transition">Reject</button>
+                <button onclick="handleApprove('${a.manager_id}', true)" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-600 hover:text-white transition shadow-sm">Approve</button>
+                <button onclick="handleApprove('${a.manager_id}', false)" class="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-600 hover:text-white transition shadow-sm">Reject</button>
             </td>
         </tr>
     `).join('');
 }
 
 async function handleApprove(id, status) {
-    await api.approveManager(id, status);
+    const res = await api.approveManager(id, status);
+    showCustomAlert(status ? "Approved" : "Rejected", res.message, status);
     loadPendingApps();
+}
+
+function switchAdminTab(tabName) {
+    if (tabName === 'pending') {
+        document.getElementById('admin-pending-view').classList.remove('hidden');
+        document.getElementById('admin-history-view').classList.add('hidden');
+        document.getElementById('admin-tab-pending').className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+        document.getElementById('admin-tab-history').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+    } else {
+        document.getElementById('admin-pending-view').classList.add('hidden');
+        document.getElementById('admin-history-view').classList.remove('hidden');
+        document.getElementById('admin-tab-history').className = "w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center";
+        document.getElementById('admin-tab-pending').className = "w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center";
+        loadAdminHistory();
+    }
 }
 
 async function loadPendingEvents() {
@@ -730,24 +752,115 @@ async function loadPendingEvents() {
         return;
     }
 
-    list.innerHTML = events.map(e => `
+    list.innerHTML = events.map(e => {
+        const sd = new Date(e.event_date);
+        const ed = new Date(e.event_end_date);
+        const startStr = sd.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const endStr = ed.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        return `
         <tr class="border-b hover:bg-gray-50 transition">
             <td class="p-4">
-                <p class="font-bold text-indigo-900">${e.title}</p>
-                <p class="text-xs text-gray-500 mt-1 max-w-xs truncate">${e.description}</p>
+                <div class="flex items-center gap-3">
+                    <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name.replace(/'/g, "\\'")}', '${e.creator_email.replace(/'/g, "\\'")}', true)" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+                    <div>
+                        <p class="font-bold text-gray-900">${e.title}</p>
+                    </div>
+                </div>
             </td>
-            <td class="p-4 text-sm text-gray-600">${e.location}</td>
+            <td class="p-4">
+                <p class="font-bold text-gray-900 flex items-center gap-2">
+                    ${e.creator_name}
+                    <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 rounded-md font-bold border border-indigo-100">
+                        ID: #${e.creator_id}
+                    </span>
+                </p>
+                <p class="text-sm text-gray-700 font-semibold flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    ${e.club_name}
+                </p>
+            </td>
             <td class="p-4 text-right">
-                <button onclick="handleEventApprove(${e.event_id}, true)" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-700">Approve</button>
-                <button onclick="handleEventApprove(${e.event_id}, false)" class="bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-700 transition">Reject</button>
+                <button onclick="handleEventApprove(${e.event_id}, true)" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-600 hover:text-white transition shadow-sm">Approve</button>
+                <button onclick="handleEventApprove(${e.event_id}, false)" class="bg-red-50 text-red-600 border border-red-200 px-4 py-1.5 rounded-lg text-sm font-bold ml-2 hover:bg-red-600 hover:text-white transition shadow-sm">Reject</button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
+}
+
+async function loadAdminHistory() {
+    const [apps, events] = await Promise.all([
+        api.getAdminAppsHistory(),
+        api.getAdminEventsHistory()
+    ]);
+
+    const appsList = document.getElementById('history-apps-list');
+    if (apps.length === 0) {
+        appsList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No application history.</td></tr>';
+    } else {
+        appsList.innerHTML = apps.map(a => `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="p-4 font-bold text-gray-900 flex items-center gap-2">
+                    ${a.applicant_name}
+                    <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 rounded-md font-bold border border-indigo-100">
+                        ID: #${a.user_id}
+                    </span>
+                </td>
+                <td class="p-4 text-gray-700 font-medium">${a.club_name}</td>
+                <td class="p-4 text-right">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${a.request_status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${a.request_status === 1 ? 'Approved' : 'Rejected'}</span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    const eventsList = document.getElementById('history-events-list');
+    if (events.length === 0) {
+        eventsList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No events history.</td></tr>';
+    } else {
+        eventsList.innerHTML = events.map(e => {
+            const sd = new Date(e.event_date);
+            const ed = new Date(e.event_end_date);
+            const startStr = sd.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const endStr = ed.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+            return `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="p-4">
+                    <div class="flex items-center gap-3">
+                        <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name.replace(/'/g, "\\'")}', '${e.creator_email.replace(/'/g, "\\'")}', true)" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </button>
+                        <p class="font-bold text-gray-900">${e.title}</p>
+                    </div>
+                </td>
+                <td class="p-4">
+                    <p class="font-bold text-gray-900 flex items-center gap-2">
+                        ${e.creator_name}
+                        <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 rounded-md font-bold border border-indigo-100">
+                            ID: #${e.creator_id}
+                        </span>
+                    </p>
+                    <p class="text-sm text-gray-700 font-semibold flex items-center gap-1 mt-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        ${e.club_name}
+                    </p>
+                </td>
+                <td class="p-4 text-right">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${e.approval_status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${e.approval_status === 1 ? 'Approved' : 'Rejected'}</span>
+                </td>
+            </tr>
+        `}).join('');
+    }
 }
 
 async function handleEventApprove(id, status) {
     const res = await api.approveEvent(id, status);
-    alert(res.message);
+    showCustomAlert(status ? "Approved" : "Rejected", res.message, status);
     loadPendingEvents(); 
 }
 

@@ -143,3 +143,27 @@ def get_my_applications(
         })
         
     return result
+
+@router.get("/history", dependencies=[Depends(security.check_is_admin)])
+def get_applications_history(db: Session = Depends(database.get_db)):
+    history_apps = (
+        db.query(models.ClubManager, models.Club.club_name, models.User.full_name)
+        .join(models.Club, models.ClubManager.club_id == models.Club.club_id)
+        .join(models.User, models.ClubManager.user_id == models.User.user_id)
+        .filter(models.ClubManager.request_status != 0)
+        .order_by(models.ClubManager.request_date.desc())
+        .all()
+    )
+    
+    result = []
+    for app, club_name, full_name in history_apps:
+        result.append({
+            "manager_id": app.manager_id,
+            "user_id": app.user_id,
+            "applicant_name": full_name,
+            "club_name": club_name,       
+            "request_status": app.request_status,
+            "request_date": app.request_date.isoformat() if app.request_date else None
+        })
+        
+    return result

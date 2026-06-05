@@ -71,7 +71,73 @@ def create_event(
 
 @router.get("/pending", dependencies=[Depends(security.check_is_admin)])
 def get_pending_events(db: Session = Depends(database.get_db)):
-    return db.query(models.Event).filter(models.Event.approval_status == 0).all()
+    events = db.query(
+        models.Event, 
+        models.User.full_name.label("creator_name"),
+        models.User.email.label("creator_email"),
+        models.Club.club_name
+    ).join(
+        models.User, models.Event.creator_id == models.User.user_id
+    ).join(
+        models.Club, models.Event.club_id == models.Club.club_id
+    ).filter(
+        models.Event.approval_status == 0
+    ).all()
+    
+    result = []
+    for e, creator_name, creator_email, club_name in events:
+        result.append({
+            "event_id": e.event_id,
+            "title": e.title,
+            "description": e.description,
+            "location": e.location,
+            "event_date": e.event_date.isoformat(),
+            "event_end_date": e.event_end_date.isoformat(),
+            "max_attendees": e.max_attendees,
+            "category": e.category,
+            "is_members_only": e.is_members_only,
+            "creator_id": e.creator_id,
+            "creator_name": creator_name,
+            "creator_email": creator_email,
+            "club_name": club_name,
+            "approval_status": e.approval_status
+        })
+    return result
+
+@router.get("/history", dependencies=[Depends(security.check_is_admin)])
+def get_events_history(db: Session = Depends(database.get_db)):
+    events = db.query(
+        models.Event, 
+        models.User.full_name.label("creator_name"),
+        models.User.email.label("creator_email"),
+        models.Club.club_name
+    ).join(
+        models.User, models.Event.creator_id == models.User.user_id
+    ).join(
+        models.Club, models.Event.club_id == models.Club.club_id
+    ).filter(
+        models.Event.approval_status != 0
+    ).all()
+    
+    result = []
+    for e, creator_name, creator_email, club_name in events:
+        result.append({
+            "event_id": e.event_id,
+            "title": e.title,
+            "description": e.description,
+            "location": e.location,
+            "event_date": e.event_date.isoformat(),
+            "event_end_date": e.event_end_date.isoformat(),
+            "max_attendees": e.max_attendees,
+            "category": e.category,
+            "is_members_only": e.is_members_only,
+            "creator_id": e.creator_id,
+            "creator_name": creator_name,
+            "creator_email": creator_email,
+            "club_name": club_name,
+            "approval_status": e.approval_status
+        })
+    return result
 
 @router.put("/approve/{event_id}", dependencies=[Depends(security.check_is_admin)])
 def approve_event(event_id: int, approve: bool, db: Session = Depends(database.get_db)):
