@@ -712,7 +712,7 @@ async function loadPendingApps() {
             </td>
             <td class="p-4">
                 <p class="font-bold text-gray-900">${a.club_name}</p>
-                <p class="text-gray-500 text-sm mt-1">"${a.application_message}"</p>
+                <p class="text-gray-800 font-medium text-sm mt-1">"${a.application_message}"</p>
             </td>
             <td class="p-4 text-right">
                 <button onclick="handleApprove('${a.manager_id}', true)" class="bg-emerald-50 text-emerald-600 border border-emerald-200 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-600 hover:text-white transition shadow-sm">Approve</button>

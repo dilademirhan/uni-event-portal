@@ -7,35 +7,117 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .auth-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .hidden { display: none; }
+        
+        .typewriter-text {
+            padding-right: 4px;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-tr from-purple-900 via-indigo-800 to-blue-600 min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex bg-white">
 
-    <div class="auth-card w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-white/20">
-        <div class="flex p-2 bg-gray-100/50 m-4 rounded-2xl">
-            <button onclick="switchTab('login')" id="login-btn" class="w-1/2 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 bg-white shadow-sm text-indigo-700">Sign In</button>
-            <button onclick="switchTab('register')" id="register-btn" class="w-1/2 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-indigo-600">Register</button>
+    <div class="hidden lg:flex lg:w-1/2 relative flex-col items-center justify-center bg-gray-900 overflow-hidden">
+        
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute inset-0 bg-[url('assets/campus.jpeg')] bg-cover bg-center" style="filter: blur(8px) brightness(0.5); transform: scale(1.1);"></div>
         </div>
 
-        <div class="p-8 pt-4">
-            <div id="error-box" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl">
-                <p id="error-message" class="text-sm text-red-700 font-semibold"></p>
+        <div class="z-10 w-full px-16 relative">
+            <div class="mb-12">
+                <h1 class="text-5xl font-bold text-white tracking-tight mb-2">Arel Uni Event Portal</h1>
+                <div class="h-1 w-20 bg-indigo-500 rounded"></div>
+            </div>
+            
+            <div class="h-24">
+                <p id="typewriter" class="text-4xl font-light text-indigo-100 typewriter-text leading-tight"></p>
+            </div>
+        </div>
+        
+        <script>
+            const messages = [
+                "Discover campus events.",
+                "Lead your university club.",
+                "Connect with your community.",
+                "Never miss an opportunity."
+            ];
+            let msgIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+            const typewriterElement = document.getElementById('typewriter');
+
+            function typeEffect() {
+                const currentMsg = messages[msgIndex];
+                
+                if (isDeleting) {
+                    typewriterElement.textContent = currentMsg.substring(0, charIndex - 1);
+                    charIndex--;
+                } else {
+                    typewriterElement.textContent = currentMsg.substring(0, charIndex + 1);
+                    charIndex++;
+                }
+
+                let typingSpeed = isDeleting ? 40 : 80;
+
+                if (!isDeleting && charIndex === currentMsg.length) {
+                    typingSpeed = 2500;
+                    isDeleting = true;
+                } else if (isDeleting && charIndex === 0) {
+                    isDeleting = false;
+                    msgIndex = (msgIndex + 1) % messages.length;
+                    typingSpeed = 500;
+                }
+
+                setTimeout(typeEffect, typingSpeed);
+            }
+            
+            setTimeout(typeEffect, 500);
+        </script>
+    </div>
+
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 z-20 relative shadow-[-5px_0_10px_0_rgba(0,0,0,0.7)]">
+        
+        <div class="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.3)] overflow-hidden border border-white/20">
+            
+            <div class="flex p-2 bg-gray-100/80 m-4 rounded-2xl">
+                <button onclick="switchTab('login')" id="login-btn" class="w-1/2 py-3 text-sm font-bold rounded-xl transition-all duration-300 bg-white shadow-sm text-indigo-700">Sign In</button>
+                <button onclick="switchTab('register')" id="register-btn" class="w-1/2 py-3 text-sm font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-indigo-600">Register</button>
             </div>
 
-            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
-                <input type="email" id="login-email" required class="w-full p-4 border rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition" placeholder="Email">
-                <input type="password" id="login-password" required class="w-full p-4 border rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition" placeholder="Password">
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.98]">Sign In</button>
-            </form>
+            <div class="p-8 pt-4">
+                
+                <div id="error-box" class="hidden mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl">
+                    <p id="error-message" class="text-sm text-red-700 font-semibold"></p>
+                </div>
 
-            <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
-                <input type="text" id="reg-name" required class="w-full p-3.5 border rounded-xl outline-none focus:border-indigo-500 transition" placeholder="Full Name">
-                <input type="email" id="reg-email" required class="w-full p-3.5 border rounded-xl outline-none focus:border-indigo-500 transition" placeholder="Arel Email">
-                <input type="password" id="reg-password" required class="w-full p-3.5 border rounded-xl outline-none focus:border-indigo-500 transition" placeholder="Password">
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98]">Create Account</button>
-            </form>
+                <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">Email</label>
+                        <input type="email" id="login-email" required class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="name@arel.edu.tr">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">Password</label>
+                        <input type="password" id="login-password" required class="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all active:scale-[0.98]">Sign In</button>
+                </form>
+
+                <form id="register-form" onsubmit="handleRegister(event)" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">Full Name</label>
+                        <input type="text" id="reg-name" required class="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all" placeholder="Jane Doe">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">Arel Email</label>
+                        <input type="email" id="reg-email" required class="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all" placeholder="jane.doe@arel.edu.tr">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 ml-1">Password</label>
+                        <input type="password" id="reg-password" required class="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]">Create Account</button>
+                </form>
+            </div>
+            
         </div>
     </div>
 
