@@ -69,3 +69,32 @@ def join_club(club_id: int, db: Session = Depends(database.get_db), current_user
     db.add(new_member)
     db.commit()
     return {"message": "Successfully joined the club"}
+
+@router.delete("/{club_id}/leave")
+def leave_club(club_id: int, db: Session = Depends(database.get_db), current_user: dict = Depends(security.get_current_user)):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    club = db.query(models.Club).filter(models.Club.club_id == club_id).first()
+
+    if not club:
+        raise HTTPException(status_code=404, detail="Club not found")
+
+    is_manager = db.query(models.ClubManager).filter(
+        models.ClubManager.club_id == club_id,
+        models.ClubManager.user_id == user.user_id,
+        models.ClubManager.request_status == 1
+    ).first()
+
+    if is_manager:
+        raise HTTPException(status_code=400, detail="Club managers cannot leave the club they manage")
+
+    membership = db.query(models.ClubMember).filter(
+        models.ClubMember.club_id == club_id,
+        models.ClubMember.user_id == user.user_id
+    ).first()
+
+    if not membership:
+        raise HTTPException(status_code=404, detail="You are not a member of this club")
+
+    db.delete(membership)
+    db.commit()
+    return {"message": "Successfully left the club"}

@@ -56,6 +56,19 @@ const api = {
         return { ok: response.ok, data: await response.json() };
     },
 
+    async leaveClub(clubId) {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/clubs/${clubId}/leave`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to leave the club");
+        }
+        return await response.json();
+    },
+
     async applyForManager(clubId, message) {
         const token = localStorage.getItem("access_token");
         const response = await fetch(`${API_BASE_URL}/applications/apply-club-manager`, {

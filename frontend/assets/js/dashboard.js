@@ -10,6 +10,12 @@ let pendingEventsGlobal = [];
 let adminHistoryEventsGlobal = [];
 let currentCampusFilter = 'Default';
 
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[id^="membership-menu-"]') && !e.target.closest('[onclick^="toggleMembershipMenu"]')) {
+        document.querySelectorAll('[id^="membership-menu-"]').forEach(m => m.classList.add('hidden'));
+    }
+});
+
 async function init() {
     const user = await api.getMe();
     if (!user.user_id) return window.location.href = "index.html";
@@ -321,17 +327,65 @@ function renderMyMemberships() {
         return;
     }
     
-    grid.innerHTML = myClubs.map(c => `
-        <div class="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-xl border border-indigo-100 shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col">
-            <h3 class="font-bold text-lg text-indigo-900 mb-2">${c.club_name}</h3>
+    grid.innerHTML = myClubs.map(c => {
+        const isManager = currentUser.role_id === 2 && currentManagerClubId === c.club_id;
+        return `
+        <div class="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-xl border border-indigo-100 shadow-sm transform hover:-translate-y-2 hover:shadow-xl transition duration-300 flex flex-col relative">
+            <div class="absolute top-3 right-3 flex items-center gap-1">
+                <button onclick="openJoinModal('${c.club_id}')" class="w-8 h-8 rounded-full hover:bg-indigo-100 flex items-center justify-center transition text-indigo-400 hover:text-indigo-600" title="View Details">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
+                ${!isManager ? `
+                <div class="relative">
+                    <button onclick="toggleMembershipMenu(${c.club_id})" class="w-8 h-8 rounded-full hover:bg-indigo-100 flex items-center justify-center transition text-gray-400 hover:text-indigo-600">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                    </button>
+                    <div id="membership-menu-${c.club_id}" class="hidden absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        <button onclick="handleLeaveClub(${c.club_id}, '${c.club_name.replace(/'/g, "\\'")}')" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                            Leave the Club
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+            <h3 class="font-bold text-lg text-indigo-900 mb-2 pr-16">${c.club_name}</h3>
             <span class="text-xs font-bold text-indigo-600 uppercase mb-4">${c.category || 'General'}</span>
             <div class="mt-auto">
-                <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 font-bold rounded-lg text-sm border border-emerald-200">
-                    Active Member
+                <span class="inline-block px-3 py-1 ${isManager ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'} font-bold rounded-lg text-sm border">
+                    ${isManager ? '⭐ Club Manager' : 'Active Member'}
                 </span>
             </div>
         </div>
-    `).join('');
+    `}).join('');
+}
+
+function toggleMembershipMenu(clubId) {
+    const allMenus = document.querySelectorAll('[id^="membership-menu-"]');
+    allMenus.forEach(menu => {
+        if (menu.id !== `membership-menu-${clubId}`) {
+            menu.classList.add('hidden');
+        }
+    });
+    const menu = document.getElementById(`membership-menu-${clubId}`);
+    menu.classList.toggle('hidden');
+}
+
+async function handleLeaveClub(clubId, clubName) {
+    document.querySelectorAll('[id^="membership-menu-"]').forEach(m => m.classList.add('hidden'));
+    showConfirm(
+        'Leave Club',
+        `Are you sure you want to leave <strong>${clubName}</strong>?`,
+        async () => {
+            try {
+                await api.leaveClub(clubId);
+                showCustomAlert('Success', `You have left ${clubName}.`, true);
+                await loadClubs();
+            } catch (err) {
+                showCustomAlert('Error', err.message, false);
+            }
+        }
+    );
 }
 
 function closeErrorModal() {
@@ -368,7 +422,7 @@ function showCustomAlert(title, message, isSuccess = false) {
 
 function showConfirm(title, message, onConfirm) {
     document.getElementById('confirm-modal-title').innerText = title;
-    document.getElementById('confirm-modal-message').innerText = message;
+    document.getElementById('confirm-modal-message').innerHTML = message;
     const modal = document.getElementById('confirm-modal');
     modal.classList.remove('hidden');
 
