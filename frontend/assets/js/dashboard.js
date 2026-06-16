@@ -6,6 +6,8 @@ let clubsGlobal = [];
 let myMembershipsGlobal = [];
 let myRegistrationsGlobal = [];
 let campusEventsGlobal = [];
+let pendingEventsGlobal = [];
+let adminHistoryEventsGlobal = [];
 let currentCampusFilter = 'Default';
 
 async function init() {
@@ -50,11 +52,45 @@ async function init() {
         document.getElementById('ev-date').min = localISOTime;
         document.getElementById('ev-end-date').min = localISOTime;
         
-        document.getElementById('ev-date').addEventListener('change', (e) => {
-            if (e.target.value) {
-                document.getElementById('ev-end-date').min = e.target.value;
+        const evDate = document.getElementById('ev-date');
+        const evEndDate = document.getElementById('ev-end-date');
+        
+        function validateCreateDates() {
+            if (evDate.value && evEndDate.value) {
+                if (evEndDate.value <= evDate.value) {
+                    evEndDate.setCustomValidity('The end date must be after the start date.');
+                } else {
+                    evEndDate.setCustomValidity('');
+                }
             }
+        }
+        
+        evDate.addEventListener('change', (e) => {
+            if (e.target.value) evEndDate.min = e.target.value;
+            validateCreateDates();
         });
+        evEndDate.addEventListener('change', validateCreateDates);
+    }
+
+    if (document.getElementById('edit-ev-date') && document.getElementById('edit-ev-end-date')) {
+        const editEvDate = document.getElementById('edit-ev-date');
+        const editEvEndDate = document.getElementById('edit-ev-end-date');
+        
+        function validateEditDates() {
+            if (editEvDate.value && editEvEndDate.value) {
+                if (editEvEndDate.value <= editEvDate.value) {
+                    editEvEndDate.setCustomValidity('The end date must be after the start date.');
+                } else {
+                    editEvEndDate.setCustomValidity('');
+                }
+            }
+        }
+        
+        editEvDate.addEventListener('change', (e) => {
+            if (e.target.value) editEvEndDate.min = e.target.value;
+            validateEditDates();
+        });
+        editEvEndDate.addEventListener('change', validateEditDates);
     }
 }
 
@@ -163,11 +199,11 @@ function loadMyApplicationsTable() {
     list.innerHTML = myAppsGlobal.map(a => {
         let statusBadge = '';
         if (a.request_status === 0) {
-            statusBadge = '<span class="text-yellow-600 bg-yellow-50 font-bold text-xs px-3 py-1.5 rounded-lg">⏳ Pending</span>';
+            statusBadge = '<span class="text-orange-700 bg-orange-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Pending</span>';
         } else if (a.request_status === 1) {
-            statusBadge = '<span class="text-emerald-600 bg-emerald-50 font-bold text-xs px-3 py-1.5 rounded-lg">✅ Approved</span>';
+            statusBadge = '<span class="text-emerald-700 bg-emerald-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Approved</span>';
         } else {
-            statusBadge = '<span class="text-red-600 bg-red-50 font-bold text-xs px-3 py-1.5 rounded-lg">❌ Rejected</span>';
+            statusBadge = '<span class="text-red-700 bg-red-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Rejected</span>';
         }
 
         const dateStr = new Date(a.request_date).toLocaleDateString('en-US', { 
@@ -269,10 +305,10 @@ async function handleJoinClub(clubId) {
             await loadClubs();
             renderCampusEvents();
         } else {
-            alert(res.data.detail || "Failed to join club.");
+            showCustomAlert("Failed to Join", res.data.detail || "Failed to join club.", false);
         }
     } catch (e) {
-        alert("An error occurred");
+        showCustomAlert("Error", "An error occurred while joining the club.", false);
     }
 }
 
@@ -291,7 +327,7 @@ function renderMyMemberships() {
             <span class="text-xs font-bold text-indigo-600 uppercase mb-4">${c.category || 'General'}</span>
             <div class="mt-auto">
                 <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 font-bold rounded-lg text-sm border border-emerald-200">
-                    ✅ Active Member
+                    Active Member
                 </span>
             </div>
         </div>
@@ -329,6 +365,21 @@ function showCustomAlert(title, message, isSuccess = false) {
     modal.classList.remove('hidden');
 }
 
+
+function showConfirm(title, message, onConfirm) {
+    document.getElementById('confirm-modal-title').innerText = title;
+    document.getElementById('confirm-modal-message').innerText = message;
+    const modal = document.getElementById('confirm-modal');
+    modal.classList.remove('hidden');
+
+    const okBtn = document.getElementById('confirm-modal-ok');
+    const cancelBtn = document.getElementById('confirm-modal-cancel');
+
+    const close = () => modal.classList.add('hidden');
+    okBtn.onclick = () => { close(); onConfirm(); };
+    cancelBtn.onclick = close;
+}
+
 async function loadMyRegistrations() {
     try {
         myRegistrationsGlobal = await api.getMyRegistrations();
@@ -340,18 +391,28 @@ async function loadMyRegistrations() {
         
         grid.innerHTML = myRegistrationsGlobal.map(r => {
             const sd = new Date(r.event_date);
+            const ed = new Date(r.event_end_date);
+            const now = new Date();
+            let localState = r.computed_state;
+            if (localState !== 'Cancelled') {
+                if (now > ed) localState = 'Completed';
+                else if (now >= sd && now <= ed) localState = 'Ongoing';
+                else localState = 'Upcoming';
+            }
+
             const startStr = sd.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             
             let cardBgClass = 'bg-white border-gray-200 hover:shadow-indigo-200/50';
-            if (r.computed_state === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
-            else if (r.computed_state === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
-            else if (r.computed_state === 'Completed') cardBgClass = 'bg-gray-100 border-gray-400 hover:shadow-gray-300/50';
+            if (localState === 'Cancelled') cardBgClass = 'bg-red-100 border-red-400 hover:shadow-red-300/50';
+            else if (localState === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
+            else if (localState === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
+            else if (localState === 'Completed') cardBgClass = 'bg-white border-gray-200 hover:shadow-gray-300/50';
 
-            const safeDesc = (r.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            const safeDesc = (r.description || '').replace(/\\/g, '\\\\').replace(/"/g, '&quot;').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
             const endStr = new Date(r.event_end_date).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             return `
-            <div class="p-5 ${cardBgClass} border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 cursor-pointer relative group" onclick="openEventDetailsModal('${r.title.replace(/'/g, "\\'")}', '${safeDesc}', '${r.location}', '${r.category}', '${startStr}', '${endStr}', ${r.is_members_only}, ${r.max_attendees}, '${r.creator_name.replace(/'/g, "\\'")}', '${r.creator_email.replace(/'/g, "\\'")}', false)">
+            <div class="p-5 ${cardBgClass} border rounded-2xl flex flex-col justify-between h-full shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 cursor-pointer relative group" onclick="openEventDetailsModal('${r.title.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${safeDesc}', '${r.location.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${r.category}', '${startStr}', '${endStr}', ${r.is_members_only}, ${r.max_attendees}, '${r.creator_name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${r.creator_email.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', false)">
                 <!-- Info Icon visible always -->
                 <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="Event Details">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -368,13 +429,13 @@ async function loadMyRegistrations() {
                         </div>
                     </div>
                 </div>
-                <div class="pt-4 border-t border-gray-300/50 flex justify-between items-center">
+                <div class="mt-auto pt-4 border-t border-gray-300/50 flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-600">Registered: ${new Date(r.registered_at).toLocaleDateString()}</span>
                     ${(() => {
-                        if (r.computed_state === 'Cancelled') return '<span class="text-xs font-bold bg-red-50 text-red-700 px-3 py-1.5 rounded-lg border border-red-100 shadow-sm shrink-0">Cancelled</span>';
-                        if (r.computed_state === 'Completed') return '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm shrink-0">Completed</span>';
-                        if (r.computed_state === 'Ongoing') return '<span class="text-xs font-bold bg-teal-50 text-teal-700 px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm shrink-0 animate-pulse">Ongoing</span>';
-                        return '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm shrink-0">Upcoming</span>';
+                        if (localState === 'Cancelled') return '<span class="text-xs font-bold bg-rose-600 text-white px-3 py-1.5 rounded-lg border border-rose-600 shadow-sm shrink-0">Cancelled</span>';
+                        if (localState === 'Completed') return '<span class="text-xs font-bold bg-slate-500 text-white px-3 py-1.5 rounded-lg border border-slate-500 shadow-sm shrink-0">Completed</span>';
+                        if (localState === 'Ongoing') return '<span class="text-xs font-bold bg-teal-600 text-white px-3 py-1.5 rounded-lg border border-teal-600 shadow-sm shrink-0 animate-pulse">Ongoing</span>';
+                        return '<span class="text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded-lg border border-blue-600 shadow-sm shrink-0">Upcoming</span>';
                     })()}
                 </div>
             </div>
@@ -422,18 +483,18 @@ function renderCampusEvents() {
         let state = 'Upcoming';
         let badgeHtml = '';
         
-        if (e.approval_status === 2) {
+        if (e.event_state === 'Cancelled') {
             state = 'Cancelled';
-            badgeHtml = '<span class="text-xs font-bold bg-red-50 text-red-700 px-2 py-1 rounded-md border border-red-100 shrink-0">Cancelled</span>';
+            badgeHtml = '<span class="text-xs font-bold bg-rose-600 text-white px-2 py-1 rounded-md border border-rose-600 shrink-0 shadow-sm">Cancelled</span>';
         } else if (now > end) {
             state = 'Completed';
-            badgeHtml = '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded-md border border-gray-200 shrink-0">Completed</span>';
+            badgeHtml = '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-md border border-slate-500 shrink-0 shadow-sm">Completed</span>';
         } else if (now >= start && now <= end) {
             state = 'Ongoing';
-            badgeHtml = '<span class="text-xs font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100 shrink-0 animate-pulse">Ongoing</span>';
+            badgeHtml = '<span class="text-xs font-bold bg-teal-600 text-white px-2 py-1 rounded-md border border-teal-600 shrink-0 animate-pulse">Ongoing</span>';
         } else {
             state = 'Upcoming';
-            badgeHtml = '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>';
+            badgeHtml = '<span class="text-xs font-bold bg-blue-600 text-white px-2 py-1 rounded-md border border-blue-600 shrink-0 shadow-sm">Upcoming</span>';
         }
         
         return { ...e, computedState: state, badgeHtml };
@@ -474,19 +535,21 @@ function renderCampusEvents() {
         if (e.computedState === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
         else if (e.computedState === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
         else if (e.computedState === 'Cancelled') cardBgClass = 'bg-red-100 border-red-400 hover:shadow-red-300/50';
-        else if (e.computedState === 'Completed') cardBgClass = 'bg-gray-100 border-gray-400 hover:shadow-gray-300/50';
+        else if (e.computedState === 'Completed') cardBgClass = 'bg-white border-gray-200 hover:shadow-gray-300/50';
 
         const startDateFormatted = new Date(e.event_date).toLocaleString([], { 
             year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
         });
 
+        const safeDesc = (e.description || '').replace(/\\/g, '\\\\').replace(/"/g, '&quot;').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
         return `
-            <div class="${cardBgClass} p-6 rounded-xl border shadow-md transform hover:-translate-y-2 hover:shadow-2xl transition duration-300 flex flex-col relative">
-                <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${(e.description||'').replace(/'/g, "\\'")}', '${e.location}', '${e.category}', '${startDateFormatted}', '${new Date(e.event_end_date).toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name}', '${e.creator_email}', false)" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white text-indigo-700 flex items-center justify-center transition hover:bg-indigo-700 hover:text-white shadow-sm border border-indigo-200" title="Event Details">
+            <div class="${cardBgClass} p-6 rounded-xl border shadow-md transform hover:-translate-y-2 hover:shadow-2xl transition duration-300 flex flex-col justify-between h-full relative">
+                <button onclick="openEventDetailsModal('${e.title.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${safeDesc}', '${e.location.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${e.category}', '${startDateFormatted}', '${new Date(e.event_end_date).toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', '${e.creator_email.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}', false)" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white text-indigo-700 flex items-center justify-center transition hover:bg-indigo-700 hover:text-white shadow-sm border border-indigo-200" title="Event Details">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </button>
                 <div class="flex justify-between items-start mb-4 pr-10">
-                    <h3 class="font-bold text-xl leading-tight text-gray-900">${e.title}</h3>
+                    <h3 class="font-bold text-xl leading-tight text-gray-900 line-clamp-2 min-h-[3rem]">${e.title}</h3>
                 </div>
                 <div class="mb-4">
                     ${e.badgeHtml}
@@ -525,7 +588,7 @@ async function handleRegisterEvent(eventId) {
         
         await loadUpcomingEvents(); 
     } catch (error) {
-        alert("Registration failed: " + error.message);
+        showCustomAlert("Registration Failed", error.message || "Could not register for this event.", false);
         btn.disabled = false;
         btn.innerText = originalText;
         btn.classList.remove("opacity-75", "cursor-not-allowed");
@@ -535,7 +598,7 @@ async function handleRegisterEvent(eventId) {
 async function submitApplication() {
     const message = document.getElementById('app-message').value.trim();
     if (!message) {
-        alert("Please explain why you want to become a manager.");
+        showCustomAlert("Missing Information", "Please explain why you want to become a manager.", false);
         return;
     }
     await api.applyForManager(applyingClubId, message);
@@ -562,12 +625,21 @@ async function submitEvent() {
     const eventEndDateObj = new Date(endDateStr);
     
     if (eventDateObj < new Date()) {
-        showCustomAlert("Invalid Date", "Event start date cannot be in the past.");
+        const evDateEl = document.getElementById('ev-date');
+        evDateEl.setCustomValidity("Event start date cannot be in the past.");
+        evDateEl.reportValidity();
         return;
+    } else {
+        document.getElementById('ev-date').setCustomValidity("");
     }
+    
     if (eventEndDateObj <= eventDateObj) {
-        showCustomAlert("Invalid Time", "Event end time must be after the start time.");
+        const evEndDateEl = document.getElementById('ev-end-date');
+        evEndDateEl.setCustomValidity("The end date must be after the start date.");
+        evEndDateEl.reportValidity();
         return;
+    } else {
+        document.getElementById('ev-end-date').setCustomValidity("");
     }
     
     // Convert date string directly avoiding UTC shift
@@ -593,10 +665,11 @@ async function submitEvent() {
 
 async function loadMyEvents() {
     const events = await api.getMyEvents();
+    myEventsGlobal = events;
     
     // The "Create Event" card that sits at the beginning of the grid
     const createCard = `
-        <div onclick="document.getElementById('create-event-modal').classList.remove('hidden')" class="p-5 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 hover:border-indigo-400 transition min-h-[200px] group">
+        <div onclick="openCreateEventModal()" class="p-5 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 hover:border-indigo-400 transition min-h-[200px] group">
             <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold group-hover:scale-110 transition mb-3">+</div>
             <p class="font-bold text-indigo-900">Create New Event</p>
         </div>
@@ -613,7 +686,7 @@ async function loadMyEvents() {
         const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         
         return `
-        <div class="p-5 bg-white border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 relative group cursor-pointer" onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, currentUser.full_name, currentUser.email, true)">
+        <div class="p-5 bg-white border rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-lg hover:-translate-y-1 transition duration-300 relative group cursor-pointer" onclick="openManagerEventModal(${e.event_id})">
             <!-- Info Icon visible always -->
             <button class="absolute top-4 right-4 w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white shadow-sm" title="Event Details">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -638,11 +711,12 @@ async function loadMyEvents() {
                     </span>
                     ${(() => {
                         const now = new Date();
+                        if (e.event_state === 'Cancelled' && e.approval_status !== 2) return '<span class="text-xs font-bold bg-rose-600 text-white px-2 py-1 rounded-md border border-rose-600 shrink-0 shadow-sm">Cancelled</span>';
                         if (e.approval_status === 0) return '';
-                        if (e.approval_status === 2) return '<span class="text-xs font-bold bg-red-50 text-red-700 px-2 py-1 rounded-md border border-red-100 shrink-0">Cancelled</span>';
-                        if (now > ed) return '<span class="text-xs font-bold bg-gray-100 text-gray-700 px-2 py-1 rounded-md border border-gray-200 shrink-0">Completed</span>';
-                        if (now >= sd && now <= ed) return '<span class="text-xs font-bold bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100 shrink-0 animate-pulse">Ongoing</span>';
-                        return '<span class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-100 shrink-0">Upcoming</span>';
+                        if (e.approval_status === 2) return '';
+                        if (now > ed) return '<span class="text-xs font-bold bg-slate-500 text-white px-2 py-1 rounded-md border border-slate-500 shrink-0 shadow-sm">Completed</span>';
+                        if (now >= sd && now <= ed) return '<span class="text-xs font-bold bg-teal-600 text-white px-2 py-1 rounded-md border border-teal-600 shrink-0 animate-pulse">Ongoing</span>';
+                        return '<span class="text-xs font-bold bg-blue-600 text-white px-2 py-1 rounded-md border border-blue-600 shrink-0 shadow-sm">Upcoming</span>';
                     })()}
                 </div>
                 
@@ -745,6 +819,7 @@ function switchAdminTab(tabName) {
 
 async function loadPendingEvents() {
     const events = await api.getPendingEvents();
+    pendingEventsGlobal = events;
     const list = document.getElementById('pending-events-list');
     
     if (events.length === 0) {
@@ -753,17 +828,11 @@ async function loadPendingEvents() {
     }
 
     list.innerHTML = events.map(e => {
-        const sd = new Date(e.event_date);
-        const ed = new Date(e.event_end_date);
-        const startStr = sd.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const endStr = ed.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const safeDesc = (e.description || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
         return `
         <tr class="border-b hover:bg-gray-50 transition">
             <td class="p-4">
                 <div class="flex items-center gap-3">
-                    <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name.replace(/'/g, "\\'")}', '${e.creator_email.replace(/'/g, "\\'")}', true)" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
+                    <button onclick="openAdminEventModal(${e.event_id}, 'pending')" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </button>
                     <div>
@@ -817,6 +886,7 @@ async function loadAdminHistory() {
         `).join('');
     }
 
+    adminHistoryEventsGlobal = events;
     const eventsList = document.getElementById('history-events-list');
     if (events.length === 0) {
         eventsList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No events history.</td></tr>';
@@ -832,7 +902,7 @@ async function loadAdminHistory() {
             <tr class="border-b hover:bg-gray-50 transition">
                 <td class="p-4">
                     <div class="flex items-center gap-3">
-                        <button onclick="openEventDetailsModal('${e.title.replace(/'/g, "\\'")}', '${safeDesc}', '${e.location}', '${e.category}', '${startStr}', '${endStr}', ${e.is_members_only}, ${e.max_attendees}, '${e.creator_name.replace(/'/g, "\\'")}', '${e.creator_email.replace(/'/g, "\\'")}', true)" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
+                        <button onclick="openAdminEventModal(${e.event_id}, 'history')" class="w-7 h-7 shrink-0 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center transition hover:bg-indigo-600 hover:text-white" title="Event Details">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </button>
                         <p class="font-bold text-gray-900">${e.title}</p>
@@ -870,3 +940,159 @@ function logout() {
 }
 
 init();
+
+let myEventsGlobal = [];
+
+function openManagerEventModal(eventId) {
+    const e = myEventsGlobal.find(ev => ev.event_id === eventId);
+    if (!e) return;
+    
+    const sd = new Date(e.event_date);
+    const ed = new Date(e.event_end_date);
+    const startStr = sd.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const endStr = ed.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('detail-modal-title').innerText = e.title;
+    document.getElementById('detail-modal-desc').innerText = e.description || "No description provided.";
+    document.getElementById('detail-modal-loc').innerText = e.location;
+    document.getElementById('detail-modal-cat').innerText = e.category || "General";
+    document.getElementById('detail-modal-start').innerText = startStr;
+    document.getElementById('detail-modal-end').innerText = endStr;
+    document.getElementById('detail-modal-quota').innerText = e.max_attendees + " People";
+    document.getElementById('detail-modal-creator').innerText = currentUser.full_name;
+    document.getElementById('detail-modal-email').innerText = currentUser.email;
+    
+    const membersOnlyBadge = document.getElementById('detail-modal-privacy');
+    if (e.is_members_only) {
+        membersOnlyBadge.innerText = "Members Only 🔒";
+        membersOnlyBadge.className = "px-3 py-1 bg-red-50 text-red-700 font-bold text-xs rounded-lg";
+    } else {
+        membersOnlyBadge.innerText = "Public 🌍";
+        membersOnlyBadge.className = "px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-lg";
+    }
+
+    const now = new Date();
+    let buttons = '';
+    const isCancelled = e.approval_status === 2 || e.event_state === 'Cancelled';
+    const isCompleted = ed < now;
+    const isOngoing = sd <= now && now <= ed;
+    
+    if (!isCancelled && !isCompleted && !isOngoing) {
+        buttons = `
+        <button onclick="openEditEventModal(${e.event_id})" class="px-5 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-bold rounded-xl transition border border-blue-100">Edit Event</button>
+        <button onclick="cancelEvent(${e.event_id})" class="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white font-bold rounded-xl transition border border-red-100">Cancel Event</button>
+        `;
+    }
+
+    document.getElementById('detail-modal-buttons').innerHTML = buttons;
+    document.getElementById('detail-modal-buttons').classList.remove('hidden');
+    document.getElementById('event-details-modal').classList.remove('hidden');
+}
+
+function openEditEventModal(eventId) {
+    closeEventDetailsModal();
+    const e = myEventsGlobal.find(ev => ev.event_id === eventId);
+    if (!e) return;
+    
+    document.getElementById('edit-ev-id').value = e.event_id;
+    document.getElementById('edit-ev-title').value = e.title;
+    document.getElementById('edit-ev-desc').value = e.description;
+    document.getElementById('edit-ev-loc').value = e.location;
+    
+    const tzOffset = new Date().getTimezoneOffset() * 60000;
+    document.getElementById('edit-ev-date').value = e.event_date.slice(0, 16);
+    document.getElementById('edit-ev-end-date').value = e.event_end_date.slice(0, 16);
+    document.getElementById('edit-ev-quota').value = e.max_attendees;
+    document.getElementById('edit-ev-members-only').checked = e.is_members_only;
+    
+    const nowLocalStr = (new Date(new Date() - tzOffset)).toISOString().slice(0, 16);
+    document.getElementById('edit-ev-date').setAttribute('min', nowLocalStr);
+    document.getElementById('edit-ev-end-date').setAttribute('min', nowLocalStr);
+
+    document.getElementById('edit-event-modal').classList.remove('hidden');
+}
+
+function openCreateEventModal() {
+    // Set min date to current local time
+    const tzOffset = new Date().getTimezoneOffset() * 60000;
+    const nowLocalStr = (new Date(new Date() - tzOffset)).toISOString().slice(0, 16);
+    document.getElementById('ev-date').setAttribute('min', nowLocalStr);
+    document.getElementById('ev-end-date').setAttribute('min', nowLocalStr);
+
+    document.getElementById('create-event-modal').classList.remove('hidden');
+}
+
+function closeEditEventModal() {
+    document.getElementById('edit-event-modal').classList.add('hidden');
+}
+
+async function submitEditEvent(event) {
+    event.preventDefault();
+    const eventId = document.getElementById('edit-ev-id').value;
+    const d1 = document.getElementById('edit-ev-date').value;
+    const d2 = document.getElementById('edit-ev-end-date').value;
+    const payload = {
+        title: document.getElementById('edit-ev-title').value,
+        description: document.getElementById('edit-ev-desc').value,
+        location: document.getElementById('edit-ev-loc').value,
+        event_date: d1.length === 16 ? d1 + ":00" : d1,
+        event_end_date: d2.length === 16 ? d2 + ":00" : d2,
+        max_attendees: parseInt(document.getElementById('edit-ev-quota').value) || 100,
+        is_members_only: document.getElementById('edit-ev-members-only').checked
+    };
+    
+    if (d1 >= d2) {
+        const endEl = document.getElementById('edit-ev-end-date');
+        endEl.setCustomValidity("The end date must be after the start date.");
+        endEl.reportValidity();
+        return;
+    } else {
+        document.getElementById('edit-ev-end-date').setCustomValidity("");
+    }
+
+    try {
+        await api.updateEvent(eventId, payload);
+        showCustomAlert("Success", "Event details have been updated successfully.", true);
+        closeEditEventModal();
+        loadMyEvents();
+        loadUpcomingEvents();
+    } catch(err) {
+        showCustomAlert("Update Failed", err.message || "Failed to update event.", false);
+    }
+}
+
+async function cancelEvent(eventId) {
+    showConfirm(
+        "Cancel Event",
+        "Are you sure you want to cancel this event? This action cannot be undone.",
+        async () => {
+            try {
+                await api.cancelEvent(eventId);
+                showCustomAlert("Event Cancelled", "The event has been successfully cancelled.", true);
+                closeEventDetailsModal();
+                loadMyEvents();
+                loadUpcomingEvents();
+            } catch(err) {
+                showCustomAlert("Cancellation Failed", err.message || "Failed to cancel event.", false);
+            }
+        }
+    );
+}
+
+
+
+function openAdminEventModal(eventId, source) {
+    let e;
+    if(source === "pending") e = pendingEventsGlobal.find(ev => ev.event_id === eventId);
+    else e = adminHistoryEventsGlobal.find(ev => ev.event_id === eventId);
+    if(!e) return;
+    const fmtOpts = { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+    openEventDetailsModal(e.title, e.description, e.location, e.category, new Date(e.event_date).toLocaleString([], fmtOpts), new Date(e.event_end_date).toLocaleString([], fmtOpts), e.is_members_only, e.max_attendees, e.creator_name, e.creator_email, false);
+}
+
+function openCampusEventModal(eventId) {
+    const e = campusEventsGlobal.find(ev => ev.event_id === eventId);
+    if(!e) return;
+    const fmtOpts = { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+    openEventDetailsModal(e.title, e.description, e.location, e.category, new Date(e.event_date).toLocaleString([], fmtOpts), new Date(e.event_end_date).toLocaleString([], fmtOpts), e.is_members_only, e.max_attendees, e.creator_name, e.creator_email, false);
+}

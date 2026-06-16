@@ -199,7 +199,7 @@
             </div>
         </section>
 
-        <div id="error-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div id="error-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
             <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 text-center border-t-4 border-red-500">
                 <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                     <span class="text-red-600 text-xl">❌</span>
@@ -207,6 +207,21 @@
                 <h3 id="error-modal-title" class="text-lg font-bold text-gray-900 mb-2">Pending Application</h3>
                 <p id="error-modal-message" class="text-sm text-gray-600 mb-6">You already have a pending manager application for another club. Please check 'My Applications' or wait for the Admin's decision.</p>
                 <button onclick="closeErrorModal()" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition">Understood</button>
+            </div>
+        </div>
+
+        <!-- Confirm Modal -->
+        <div id="confirm-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
+            <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6 text-center border-t-4 border-orange-400">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-4">
+                    <span class="text-orange-600 text-xl">⚠️</span>
+                </div>
+                <h3 id="confirm-modal-title" class="text-lg font-bold text-gray-900 mb-2">Are you sure?</h3>
+                <p id="confirm-modal-message" class="text-sm text-gray-600 mb-6">This action cannot be undone.</p>
+                <div class="flex gap-3">
+                    <button id="confirm-modal-cancel" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-bold transition">Cancel</button>
+                    <button id="confirm-modal-ok" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition">Yes, Cancel Event</button>
+                </div>
             </div>
         </div>
 
@@ -299,12 +314,12 @@
                 
                 <div class="flex flex-col">
                     <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Start Date & Time</label>
-                    <input type="datetime-local" id="ev-date" class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="datetime-local" id="ev-date" class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" oninvalid="if(this.validity.rangeUnderflow) this.setCustomValidity('Value must be ' + this.min.replace('T', ' ') + ' or later.'); else if(this.validity.valueMissing) this.setCustomValidity('Please fill out this field.');" oninput="this.setCustomValidity('')">
                 </div>
 
                 <div class="flex flex-col">
                     <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">End Date & Time</label>
-                    <input type="datetime-local" id="ev-end-date" class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <input type="datetime-local" id="ev-end-date" class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" oninvalid="if(this.validity.rangeUnderflow) this.setCustomValidity('Value must be ' + this.min.replace('T', ' ') + ' or later.'); else if(this.validity.valueMissing) this.setCustomValidity('Please fill out this field.');" oninput="this.setCustomValidity('')">
                 </div>
                 
                 <div class="flex flex-col">
@@ -321,6 +336,50 @@
                 
                 <button onclick="submitEvent()" class="bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition col-span-1 md:col-span-2 shadow-sm mt-4">Submit Event Request</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Event Modal -->
+    <div id="edit-event-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" onclick="closeEditEventModal()">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-indigo-950">Edit Event</h2>
+                <button onclick="closeEditEventModal()" class="text-gray-400 hover:text-red-500 font-bold text-2xl">&times;</button>
+            </div>
+            <form id="edit-event-form" class="grid grid-cols-1 md:grid-cols-2 gap-5" onsubmit="submitEditEvent(event)">
+                <input type="hidden" id="edit-ev-id">
+                <div class="md:col-span-2 flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Event Title</label>
+                    <input type="text" id="edit-ev-title" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="md:col-span-2 flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Description</label>
+                    <textarea id="edit-ev-desc" rows="3" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+                </div>
+                <div class="md:col-span-2 flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Location</label>
+                    <input type="text" id="edit-ev-loc" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Start Date & Time</label>
+                    <input type="datetime-local" id="edit-ev-date" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" oninvalid="if(this.validity.rangeUnderflow) this.setCustomValidity('Value must be ' + this.min.replace('T', ' ') + ' or later.'); else if(this.validity.valueMissing) this.setCustomValidity('Please fill out this field.');" oninput="this.setCustomValidity('')">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">End Date & Time</label>
+                    <input type="datetime-local" id="edit-ev-end-date" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" oninvalid="if(this.validity.rangeUnderflow) this.setCustomValidity('Value must be ' + this.min.replace('T', ' ') + ' or later.'); else if(this.validity.valueMissing) this.setCustomValidity('Please fill out this field.');" oninput="this.setCustomValidity('')">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Capacity (Max Attendees)</label>
+                    <input type="number" id="edit-ev-quota" placeholder="100" min="1" required class="p-3 bg-gray-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex flex-col justify-end">
+                    <div class="flex items-center p-3 bg-indigo-50 border border-indigo-100 rounded-xl h-[50px]">
+                        <input type="checkbox" id="edit-ev-members-only" class="w-5 h-5 text-indigo-600 rounded border-indigo-300 focus:ring-indigo-500 cursor-pointer">
+                        <label for="edit-ev-members-only" class="ml-3 text-sm font-bold text-indigo-900 cursor-pointer">Members Only Event</label>
+                    </div>
+                </div>
+                <button type="submit" class="bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition col-span-1 md:col-span-2 shadow-sm mt-4">Save Changes</button>
+            </form>
         </div>
     </div>
 
@@ -375,8 +434,7 @@
             </div>
 
             <div id="detail-modal-buttons" class="mt-8 flex justify-end gap-3 pt-5 border-t border-gray-100">
-                <button disabled title="Coming Soon" class="px-5 py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed border border-gray-200">Edit Event</button>
-                <button disabled title="Coming Soon" class="px-5 py-2.5 bg-red-50 text-red-300 font-bold rounded-xl cursor-not-allowed border border-red-100">Cancel Event</button>
+                <!-- Dynamically injected by JS -->
             </div>
         </div>
     </div>

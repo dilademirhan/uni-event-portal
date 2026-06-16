@@ -42,14 +42,25 @@ def create_event(
     if daily_count >= 2:
         raise HTTPException(status_code=400, detail="Daily limit reached: You can only schedule a maximum of 2 events per day.")
 
+    if event_date >= event_end_date:
+        raise HTTPException(status_code=400, detail="End date and time must be after the start date and time.")
+
+    now = datetime.utcnow()
+    if event_date.tzinfo:
+        now = datetime.now(event_date.tzinfo)
+    if event_date < now:
+        raise HTTPException(status_code=400, detail="Event start date cannot be in the past.")
+
     conflict = db.query(models.Event).filter(
         models.Event.club_id == manager_record.club_id,
         models.Event.event_date < event_end_date,
-        models.Event.event_end_date > event_date
+        models.Event.event_end_date > event_date,
+        models.Event.event_state != 'Cancelled',
+        models.Event.approval_status != 2
     ).first()
 
     if conflict:
-        raise HTTPException(status_code=400, detail="Time conflict: Your club already has an event whose duration overlaps with this new event.")
+        raise HTTPException(status_code=400, detail="Time conflict: Your club already has an active event whose duration overlaps with this new event.")
 
     new_event = models.Event(
         title=title,
@@ -82,7 +93,7 @@ def get_pending_events(db: Session = Depends(database.get_db)):
         models.Club, models.Event.club_id == models.Club.club_id
     ).filter(
         models.Event.approval_status == 0
-    ).all()
+    ).order_by(models.Event.event_date.asc()).all()
     
     result = []
     for e, creator_name, creator_email, club_name in events:
@@ -160,7 +171,7 @@ def get_my_events(
     current_user: dict = Depends(security.check_is_manager)
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
-    return db.query(models.Event).filter(models.Event.creator_id == user.user_id).all()
+    return db.query(models.Event).filter(models.Event.creator_id == user.user_id).order_by(models.Event.event_date.asc()).all()
 
 @router.get("/upcoming")
 def get_upcoming_events(
@@ -178,7 +189,7 @@ def get_upcoming_events(
         models.User, models.Event.creator_id == models.User.user_id
     ).filter(
         models.Event.approval_status == 1
-    ).all()
+    ).order_by(models.Event.event_date.asc()).all()
     
     result = []
     for event, club_name, creator_name, creator_email in events:
@@ -197,6 +208,7 @@ def get_upcoming_events(
             "max_attendees": event.max_attendees,
             "is_members_only": event.is_members_only,
             "current_capacity": reg_count,
+            "event_state": event.event_state,
             "club_id": event.club_id,
             "club_name": club_name,
             "creator_name": creator_name,
@@ -280,7 +292,105 @@ def get_my_registrations(
             "event_end_date": r[1].event_end_date.isoformat(),
             "creator_name": r.creator_name,
             "creator_email": r.creator_email,
-            "computed_state": "Cancelled" if r[1].approval_status == 2 else ("Completed" if r[1].event_end_date < datetime.utcnow() else ("Ongoing" if r[1].event_date <= datetime.utcnow() <= r[1].event_end_date else "Upcoming"))
+            "event_state": r[1].event_state,
+            "computed_state": "Cancelled" if r[1].approval_status == 2 or r[1].event_state == "Cancelled" else ("Completed" if r[1].event_end_date < datetime.utcnow() else ("Ongoing" if r[1].event_date <= datetime.utcnow() <= r[1].event_end_date else "Upcoming"))
         }
         for r in regs
     ]
+
+from pydantic import BaseModel
+
+class EventUpdate(BaseModel):
+    title: str
+    description: str
+    location: str
+    event_date: datetime
+    event_end_date: datetime
+    max_attendees: int
+    is_members_only: bool
+
+@router.put("/{event_id}")
+def update_event(
+    event_id: int,
+    event_data: EventUpdate,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.check_is_manager)
+):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+        
+    if event.creator_id != user.user_id:
+        raise HTTPException(status_code=403, detail="You can only edit your own events.")
+        
+    now = datetime.utcnow()
+    if event.approval_status == 2 or event.event_state == "Cancelled":
+        raise HTTPException(status_code=400, detail="Cannot modify a cancelled event.")
+    if event.approval_status == 1:
+        if event.event_end_date and event.event_end_date < now:
+            raise HTTPException(status_code=400, detail="Cannot modify a completed event.")
+        if event.event_date and event.event_date <= now <= (event.event_end_date or now):
+            raise HTTPException(status_code=400, detail="Cannot modify an ongoing event.")
+            
+    if event_data.event_date >= event_data.event_end_date:
+        raise HTTPException(status_code=400, detail="End date and time must be after the start date and time.")
+        
+    now = datetime.utcnow()
+    if event_data.event_date.tzinfo:
+        now = datetime.now(event_data.event_date.tzinfo)
+    if event_data.event_date < now:
+        raise HTTPException(status_code=400, detail="Event start date cannot be in the past.")
+
+    conflict = db.query(models.Event).filter(
+        models.Event.club_id == event.club_id,
+        models.Event.event_date < event_data.event_end_date,
+        models.Event.event_end_date > event_data.event_date,
+        models.Event.event_id != event_id,
+        models.Event.event_state != 'Cancelled',
+        models.Event.approval_status != 2
+    ).first()
+
+    if conflict:
+        raise HTTPException(status_code=400, detail="Time conflict: Your club already has an active event whose duration overlaps with this new time.")
+            
+    event.title = event_data.title
+    event.description = event_data.description
+    event.location = event_data.location
+    event.event_date = event_data.event_date
+    event.event_end_date = event_data.event_end_date
+    event.max_attendees = event_data.max_attendees
+    event.is_members_only = event_data.is_members_only
+    
+    db.commit()
+    return {"message": "Event updated successfully!"}
+
+@router.patch("/{event_id}/cancel")
+def cancel_event(
+    event_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.check_is_manager)
+):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+        
+    if event.creator_id != user.user_id:
+        raise HTTPException(status_code=403, detail="You can only cancel your own events.")
+        
+    now = datetime.utcnow()
+    if event.approval_status == 2 or event.event_state == "Cancelled":
+        raise HTTPException(status_code=400, detail="Event is already cancelled.")
+    if event.approval_status == 1:
+        if event.event_end_date and event.event_end_date < now:
+            raise HTTPException(status_code=400, detail="Cannot cancel a completed event.")
+        if event.event_date and event.event_date <= now <= (event.event_end_date or now):
+            raise HTTPException(status_code=400, detail="Cannot cancel an ongoing event.")
+            
+    event.event_state = "Cancelled"
+    db.commit()
+    return {"message": "Event has been cancelled successfully."}
+

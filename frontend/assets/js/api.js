@@ -179,5 +179,47 @@ const api = {
             headers: { "Authorization": `Bearer ${token}` }
         });
         return await response.json();
+    },
+
+    async request(path, method = 'GET', body = null) {
+        const token = localStorage.getItem("access_token");
+        const options = {
+            method,
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+        };
+        if (body) options.body = JSON.stringify(body);
+        const response = await fetch(`${API_BASE_URL}${path}`, options);
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Request failed");
+        }
+        return await response.json();
+    },
+
+    async updateEvent(eventId, payload) {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to update event");
+        }
+        return await response.json();
+    },
+
+    async cancelEvent(eventId) {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}/cancel`, {
+            method: "PATCH",
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to cancel event");
+        }
+        return await response.json();
     }
-};
+};
