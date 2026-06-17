@@ -117,7 +117,7 @@ async function loadClubs() {
         
         if (currentUser.role_id === 2) {
             if (currentManagerClubId === c.club_id) {
-                buttonHTML = `<button disabled class="w-full py-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg cursor-not-allowed mt-2">✅ You are Manager</button>`;
+                buttonHTML = `<button disabled class="w-full py-2 bg-emerald-100 text-emerald-600 font-bold rounded-lg cursor-not-allowed mt-2 shadow-inner border border-emerald-200">You are Manager</button>`;
             } else {
                 buttonHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed mt-2">Already Managing a Club</button>`;
             }
@@ -137,7 +137,7 @@ async function loadClubs() {
         } else {
             const isMember = myMemberships.find(m => m.club_id === c.club_id);
             if (isMember) {
-                joinHTML = `<button disabled class="w-full py-2 bg-indigo-50 text-indigo-700 font-bold rounded-lg cursor-not-allowed border border-indigo-100">✅ Joined</button>`;
+                joinHTML = `<button disabled class="w-full py-2 bg-indigo-100 text-indigo-500 font-bold rounded-lg cursor-not-allowed shadow-inner border border-indigo-200">Joined</button>`;
             } else if (c.member_count >= c.max_quota) {
                 joinHTML = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed">Member Quota Full</button>`;
             } else {
@@ -205,22 +205,22 @@ function loadMyApplicationsTable() {
     list.innerHTML = myAppsGlobal.map(a => {
         let statusBadge = '';
         if (a.request_status === 0) {
-            statusBadge = '<span class="text-orange-700 bg-orange-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Pending</span>';
+            statusBadge = '<span class="text-orange-700 bg-orange-100 font-bold text-sm px-3 py-1 rounded-lg shrink-0 border border-orange-200">Pending</span>';
         } else if (a.request_status === 1) {
-            statusBadge = '<span class="text-emerald-700 bg-emerald-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Approved</span>';
+            statusBadge = '<span class="text-emerald-700 bg-emerald-100 font-bold text-sm px-3 py-1 rounded-lg shrink-0 border border-emerald-200">Approved</span>';
         } else {
-            statusBadge = '<span class="text-red-700 bg-red-100 font-bold text-xs px-2 py-1 rounded-lg shrink-0">Rejected</span>';
+            statusBadge = '<span class="text-red-700 bg-red-100 font-bold text-sm px-3 py-1 rounded-lg shrink-0 border border-red-200">Rejected</span>';
         }
 
-        const dateStr = new Date(a.request_date).toLocaleDateString('en-US', { 
-            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        const dateStr = new Date(a.request_date).toLocaleString('en-US', { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true 
         });
 
         return `
             <tr class="border-b hover:bg-gray-50 transition">
                 <td class="p-4 font-bold text-indigo-900">${a.club_name}</td>
-                <td class="p-4 text-sm text-gray-600">${dateStr}</td>
-                <td class="p-4">${statusBadge}</td>
+                <td class="p-4 text-sm text-gray-800 font-semibold">${dateStr}</td>
+                <td class="p-4 text-center">${statusBadge}</td>
             </tr>
         `;
     }).join('');
@@ -277,8 +277,8 @@ function openJoinModal(clubId) {
     
     if (isMember) {
         confirmBtn.disabled = true;
-        confirmBtn.innerText = "✅ Joined";
-        confirmBtn.className = "flex-1 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-xl border border-indigo-100 cursor-not-allowed";
+        confirmBtn.innerText = "Joined";
+        confirmBtn.className = "flex-1 py-3 bg-indigo-100 text-indigo-500 font-bold rounded-xl cursor-not-allowed shadow-inner border border-indigo-200";
         confirmBtn.onclick = null;
     } else if (club.member_count >= club.max_quota) {
         confirmBtn.disabled = true;
@@ -326,6 +326,14 @@ function renderMyMemberships() {
         grid.innerHTML = `<p class="col-span-3 text-gray-500 italic">You haven't joined any clubs yet.</p>`;
         return;
     }
+
+    myClubs.sort((a, b) => {
+        const aIsManager = currentUser.role_id === 2 && currentManagerClubId === a.club_id;
+        const bIsManager = currentUser.role_id === 2 && currentManagerClubId === b.club_id;
+        if (aIsManager && !bIsManager) return -1;
+        if (!aIsManager && bIsManager) return 1;
+        return 0; // Keep original order for others
+    });
     
     grid.innerHTML = myClubs.map(c => {
         const isManager = currentUser.role_id === 2 && currentManagerClubId === c.club_id;
@@ -576,7 +584,7 @@ function renderCampusEvents() {
         if (e.computedState === 'Completed' || e.computedState === 'Cancelled') {
             btnHtml = `<button disabled class="w-full py-2 bg-gray-100 text-gray-400 font-bold rounded-lg cursor-not-allowed">Event ${e.computedState}</button>`;
         } else if (isRegistered) {
-            btnHtml = `<button disabled class="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold rounded-lg cursor-not-allowed">✅ Registered</button>`;
+            btnHtml = `<button disabled class="w-full py-2 bg-indigo-100 text-indigo-500 font-bold rounded-lg cursor-not-allowed shadow-inner border border-indigo-200">Registered</button>`;
         } else if (e.is_members_only && !isMember) {
             btnHtml = `<button disabled class="w-full py-2 bg-gray-100 text-gray-500 font-bold rounded-lg cursor-not-allowed" title="You must join the club first">🔒 Members Only</button>`;
         } else if (isFull) {
@@ -589,7 +597,7 @@ function renderCampusEvents() {
         if (e.computedState === 'Ongoing') cardBgClass = 'bg-teal-100 border-teal-500 hover:shadow-teal-400/50';
         else if (e.computedState === 'Upcoming') cardBgClass = 'bg-blue-100 border-blue-400 hover:shadow-blue-300/50';
         else if (e.computedState === 'Cancelled') cardBgClass = 'bg-red-100 border-red-400 hover:shadow-red-300/50';
-        else if (e.computedState === 'Completed') cardBgClass = 'bg-white border-gray-200 hover:shadow-gray-300/50';
+        else if (e.computedState === 'Completed') cardBgClass = 'bg-gray-100 border-gray-400 opacity-90 hover:opacity-100 hover:shadow-gray-400/50 transition-opacity';
 
         const startDateFormatted = new Date(e.event_date).toLocaleString([], { 
             year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
@@ -826,7 +834,7 @@ async function loadPendingApps() {
     const list = document.getElementById('pending-apps-list');
     
     if (apps.length === 0) {
-        list.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No pending applications.</td></tr>';
+        list.innerHTML = '<tr><td colspan="2"></td><td colspan="2" class="p-4 text-left text-gray-400">No pending applications.</td></tr>';
         return;
     }
 
@@ -837,6 +845,9 @@ async function loadPendingApps() {
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     User #${a.user_id}
                 </span>
+            </td>
+            <td class="p-4 text-sm text-gray-800 font-semibold">
+                ${a.request_date ? new Date(a.request_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
             </td>
             <td class="p-4">
                 <p class="font-bold text-gray-900">${a.club_name}</p>
@@ -877,7 +888,7 @@ async function loadPendingEvents() {
     const list = document.getElementById('pending-events-list');
     
     if (events.length === 0) {
-        list.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No pending events.</td></tr>';
+        list.innerHTML = '<tr><td colspan="2"></td><td colspan="2" class="p-4 text-left text-gray-400">No pending events.</td></tr>';
         return;
     }
 
@@ -893,6 +904,9 @@ async function loadPendingEvents() {
                         <p class="font-bold text-gray-900">${e.title}</p>
                     </div>
                 </div>
+            </td>
+            <td class="p-4 text-sm text-gray-800 font-semibold">
+                ${e.request_date ? new Date(e.request_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
             </td>
             <td class="p-4">
                 <p class="font-bold text-gray-900 flex items-center gap-2">
@@ -922,7 +936,7 @@ async function loadAdminHistory() {
 
     const appsList = document.getElementById('history-apps-list');
     if (apps.length === 0) {
-        appsList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No application history.</td></tr>';
+        appsList.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">No application history.</td></tr>';
     } else {
         appsList.innerHTML = apps.map(a => `
             <tr class="border-b hover:bg-gray-50 transition">
@@ -933,6 +947,12 @@ async function loadAdminHistory() {
                     </span>
                 </td>
                 <td class="p-4 text-gray-700 font-medium">${a.club_name}</td>
+                <td class="p-4 text-sm text-gray-600 font-medium">
+                    ${a.request_date ? new Date(a.request_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
+                </td>
+                <td class="p-4 text-sm text-gray-600 font-bold">
+                    ${a.decision_date ? new Date(a.decision_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
+                </td>
                 <td class="p-4 text-right">
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${a.request_status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${a.request_status === 1 ? 'Approved' : 'Rejected'}</span>
                 </td>
@@ -943,7 +963,7 @@ async function loadAdminHistory() {
     adminHistoryEventsGlobal = events;
     const eventsList = document.getElementById('history-events-list');
     if (events.length === 0) {
-        eventsList.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-gray-400">No events history.</td></tr>';
+        eventsList.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">No events history.</td></tr>';
     } else {
         eventsList.innerHTML = events.map(e => {
             const sd = new Date(e.event_date);
@@ -974,6 +994,12 @@ async function loadAdminHistory() {
                         ${e.club_name}
                     </p>
                 </td>
+                <td class="p-4 text-sm text-gray-600 font-medium">
+                    ${e.request_date ? new Date(e.request_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
+                </td>
+                <td class="p-4 text-sm text-gray-600 font-bold">
+                    ${e.decision_date ? new Date(e.decision_date).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '-'}
+                </td>
                 <td class="p-4 text-right">
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${e.approval_status === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${e.approval_status === 1 ? 'Approved' : 'Rejected'}</span>
                 </td>
@@ -989,8 +1015,14 @@ async function handleEventApprove(id, status) {
 }
 
 function logout() {
-    localStorage.clear();
-    window.location.href = "index.html";
+    showConfirm(
+        "Log Out",
+        "Are you sure you want to log out of the Uni Event Portal?",
+        () => {
+            localStorage.clear();
+            window.location.href = "index.html";
+        }
+    );
 }
 
 init();

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 from .. import models, schemas, security, database
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
@@ -80,7 +81,8 @@ def get_pending_applications(db: Session = Depends(database.get_db)):
             "user_id": app.user_id,
             "club_id": app.club_id,       
             "club_name": club_name,       
-            "application_message": app.application_message 
+            "application_message": app.application_message,
+            "request_date": app.request_date.isoformat() if app.request_date else None
         })
         
     return result
@@ -97,6 +99,7 @@ def approve_application(
 
     if approve:
         app.request_status = 1
+        app.decision_date = datetime.now()
         user = db.query(models.User).filter(models.User.user_id == app.user_id).first()
         user.role_id = 2 
         
@@ -112,6 +115,7 @@ def approve_application(
         msg = "Application approved! User is now a Club Manager and officially a Club Member."
     else:
         app.request_status = 2
+        app.decision_date = datetime.now()
         msg = "Application rejected."
 
     db.commit()
@@ -159,11 +163,12 @@ def get_applications_history(db: Session = Depends(database.get_db)):
     for app, club_name, full_name in history_apps:
         result.append({
             "manager_id": app.manager_id,
-            "user_id": app.user_id,
+            "applicant_id": app.user_id,
             "applicant_name": full_name,
             "club_name": club_name,       
             "request_status": app.request_status,
-            "request_date": app.request_date.isoformat() if app.request_date else None
+            "request_date": app.request_date.isoformat() if app.request_date else None,
+            "decision_date": app.decision_date.isoformat() if app.decision_date else None
         })
         
     return result

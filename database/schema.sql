@@ -31,6 +31,7 @@ CREATE TABLE Club_Managers (
     user_id INT NOT NULL,
     request_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     request_date DATETIME DEFAULT GETDATE(),
+    decision_date DATETIME,
     application_message NVARCHAR(MAX),
     CONSTRAINT FK_Mgr_Club FOREIGN KEY (club_id) REFERENCES Clubs(club_id) ON DELETE CASCADE,
     CONSTRAINT FK_Mgr_User FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
@@ -65,6 +66,8 @@ CREATE TABLE Events (
     approval_status INT DEFAULT 0, -- 0: Pending, 1: Approved, 2: Rejected
     event_state NVARCHAR(20) DEFAULT 'Upcoming',
     max_attendees INT DEFAULT 100,
+    created_at DATETIME DEFAULT GETDATE(),
+    decision_date DATETIME,
     CONSTRAINT FK_Evnt_Club FOREIGN KEY (club_id) REFERENCES Clubs(club_id) ON DELETE CASCADE,
     CONSTRAINT FK_Evnt_Creator FOREIGN KEY (creator_id) REFERENCES Users(user_id),
     CONSTRAINT CHK_Evnt_Appr CHECK (approval_status IN (0, 1, 2)),

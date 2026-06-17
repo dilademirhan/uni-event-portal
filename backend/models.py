@@ -32,6 +32,7 @@ class ClubManager(Base):
     user_id = Column(Integer, ForeignKey("Users.user_id", ondelete="CASCADE"))
     request_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected
     request_date = Column(DateTime, server_default=func.now())
+    decision_date = Column(DateTime, nullable=True)
     application_message = Column(Text, nullable=True)
 
 class ClubMember(Base):
@@ -56,6 +57,8 @@ class Event(Base):
     approval_status = Column(Integer, default=0) # 0: Pending, 1: Approved, 2: Rejected
     event_state = Column(String(20), default="Upcoming")
     max_attendees = Column(Integer, default=100)
+    created_at = Column(DateTime, server_default=func.now())
+    decision_date = Column(DateTime, nullable=True)
 
 class EventRegistration(Base):
     __tablename__ = "Event_Registrations"

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
-from .. import models, security, database
 from datetime import datetime
+from .. import models, schemas, security, database
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -111,7 +111,8 @@ def get_pending_events(db: Session = Depends(database.get_db)):
             "creator_name": creator_name,
             "creator_email": creator_email,
             "club_name": club_name,
-            "approval_status": e.approval_status
+            "approval_status": e.approval_status,
+            "request_date": e.created_at.isoformat() if e.created_at else None
         })
     return result
 
@@ -146,7 +147,9 @@ def get_events_history(db: Session = Depends(database.get_db)):
             "creator_name": creator_name,
             "creator_email": creator_email,
             "club_name": club_name,
-            "approval_status": e.approval_status
+            "approval_status": e.approval_status,
+            "request_date": e.created_at.isoformat() if e.created_at else None,
+            "decision_date": e.decision_date.isoformat() if e.decision_date else None
         })
     return result
 
@@ -158,9 +161,11 @@ def approve_event(event_id: int, approve: bool, db: Session = Depends(database.g
     
     if approve:
         event.approval_status = 1  # Approved
+        event.decision_date = datetime.now()
     else:
         event.approval_status = 2  # Rejected
         event.event_state = 'Cancelled' 
+        event.decision_date = datetime.now()
     
     db.commit()
     return {"message": "Event approved!" if approve else "Event rejected and cancelled!"}
