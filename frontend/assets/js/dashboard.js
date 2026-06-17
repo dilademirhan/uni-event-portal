@@ -669,9 +669,14 @@ async function submitApplication() {
         showCustomAlert("Missing Information", "Please explain why you want to become a manager.", false);
         return;
     }
-    await api.applyForManager(applyingClubId, message);
-    closeApplyModal();
-    loadClubs();
+    try {
+        await api.applyForManager(applyingClubId, message);
+        closeApplyModal();
+        showCustomAlert("Success!", "Your manager application has been successfully sent.", true);
+        loadClubs();
+    } catch (error) {
+        showCustomAlert("Error", "Could not send application.", false);
+    }
 }
 
 async function submitEvent() {

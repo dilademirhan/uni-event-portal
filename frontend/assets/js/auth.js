@@ -56,7 +56,19 @@ async function handleLogin(event) {
     const result = await api.login(email, password);
 
     if (result.ok) {
-        localStorage.setItem("access_token", result.data.access_token);
+        const token = result.data.access_token;
+        localStorage.setItem("access_token", token);
+        
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.role === 3) {
+                window.location.href = "dashboard.html";
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        
         window.location.href = "home.html";
     } else {
         showError("Invalid email or password.");
