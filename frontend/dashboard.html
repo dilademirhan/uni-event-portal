@@ -391,56 +391,89 @@
 
     <!-- Event Details Modal (Includes Edit/Cancel layout for future) -->
     <div id="event-details-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onclick="closeEventDetailsModal()">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-start mb-6 border-b pb-4">
-                <div class="pr-4">
-                    <h2 id="detail-modal-title" class="text-2xl font-bold text-indigo-900 mb-2 leading-tight">Event Title</h2>
-                    <span id="detail-modal-privacy" class="px-3 py-1 bg-red-50 text-red-700 font-bold text-xs rounded-lg inline-block">Members Only</span>
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl relative" onclick="event.stopPropagation()">
+            <div class="p-8 overflow-y-auto">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 id="detail-modal-title" class="text-2xl font-bold text-indigo-900 mb-2 leading-tight">Event Title</h2>
+                        <span id="detail-modal-privacy" class="px-3 py-1 bg-red-50 text-red-700 font-bold text-xs rounded-lg inline-block">Members Only</span>
+                    </div>
+                    <button onclick="closeEventDetailsModal()" class="text-gray-400 hover:text-red-500 font-bold text-3xl leading-none">&times;</button>
                 </div>
-                <button onclick="closeEventDetailsModal()" class="text-gray-400 hover:text-red-500 font-bold text-3xl leading-none">&times;</button>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">Description</h4>
+                        <p id="detail-modal-desc" class="text-sm text-gray-900 font-medium leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-200 whitespace-pre-wrap">Description here...</p>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <div class="flex-1 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Category</h4>
+                            <span id="detail-modal-cat" class="font-bold text-indigo-900 text-sm">Workshop</span>
+                        </div>
+                        <div class="flex-1 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Capacity</h4>
+                            <span id="detail-modal-quota" class="font-bold text-indigo-900 text-sm">100 People</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100 space-y-3">
+                        <div class="flex items-center text-emerald-900 font-bold text-sm border-b border-emerald-100 pb-3">
+                            <span class="mr-2 text-lg">📍</span> <span id="detail-modal-loc">Location</span>
+                        </div>
+                        <div class="flex items-center text-emerald-900 text-sm pt-1">
+                            <span class="mr-2 font-bold text-indigo-400 w-12">Start:</span> <span id="detail-modal-start">Date</span>
+                        </div>
+                        <div class="flex items-center text-emerald-900 text-sm">
+                            <span class="mr-2 font-bold text-indigo-400 w-12">End:</span> <span id="detail-modal-end">Date</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-gray-100">
+                        <div class="flex items-center text-sm text-gray-600 mb-2">
+                            <span class="mr-2 text-lg">👤</span> Organized by: <span id="detail-modal-creator" class="font-bold text-indigo-600 ml-1">Creator Name</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <span class="mr-2 text-lg">✉️</span> Mail: <span id="detail-modal-email" class="font-bold text-indigo-600 ml-1">email@example.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="detail-modal-buttons" class="mt-8 flex justify-end gap-3 pt-5 border-t border-gray-100 hidden">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Participants Modal -->
+    <div id="participants-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70]" onclick="closeParticipantsModal()">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl relative" onclick="event.stopPropagation()">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-indigo-50/50 rounded-t-2xl">
+                <div>
+                    <h2 class="text-xl font-bold text-indigo-900">Registered Participants</h2>
+                    <p class="text-sm text-indigo-500 font-medium mt-1">Full list of attendees for this event</p>
+                </div>
+                <button onclick="closeParticipantsModal()" class="text-indigo-400 hover:text-red-500 transition font-bold text-3xl leading-none">&times;</button>
             </div>
             
-            <div class="space-y-5">
-                <div>
-                    <h4 class="text-xs font-bold text-indigo-600 mb-1 tracking-wide">DESCRIPTION</h4>
-                    <p id="detail-modal-desc" class="text-sm text-gray-900 font-medium leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-200 whitespace-pre-wrap">Description here...</p>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-center">
-                        <span class="text-xs font-bold text-indigo-400 block mb-1">CATEGORY</span>
-                        <span id="detail-modal-cat" class="font-bold text-indigo-900 text-sm">Workshop</span>
-                    </div>
-                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col justify-center">
-                        <span class="text-xs font-bold text-indigo-400 block mb-1">CAPACITY</span>
-                        <span id="detail-modal-quota" class="font-bold text-indigo-900 text-sm">100 People</span>
-                    </div>
-                </div>
-
-                <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100">
-                    <div class="flex items-center text-sm font-bold text-emerald-800 mb-3 pb-3 border-b border-emerald-100">
-                        <span class="mr-2 text-lg">📍</span> <span id="detail-modal-loc">Location</span>
-                    </div>
-                    <div class="flex items-center text-sm font-semibold text-gray-700 mb-2">
-                        <span class="mr-2 font-bold text-indigo-400 w-12">Start:</span> <span id="detail-modal-start">Date</span>
-                    </div>
-                    <div class="flex items-center text-sm font-semibold text-gray-700">
-                        <span class="mr-2 font-bold text-indigo-400 w-12">End:</span> <span id="detail-modal-end">Date</span>
-                    </div>
-                </div>
-                
-                <div class="flex flex-col text-sm font-semibold text-gray-700 pt-3 border-t border-gray-100 gap-2">
-                    <div class="flex items-center">
-                        <span class="mr-2 text-lg">👤</span> Organized by: <span id="detail-modal-creator" class="font-bold text-indigo-600 ml-1">Creator Name</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="mr-2 text-lg">✉️</span> Mail: <span id="detail-modal-email" class="font-bold text-indigo-600 ml-1">email@example.com</span>
-                    </div>
-                </div>
+            <div class="p-0 overflow-y-auto flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-indigo-50/50 border-b border-indigo-100 sticky top-0">
+                        <tr>
+                            <th class="py-3.5 px-6 text-xs font-bold text-indigo-900/80 uppercase tracking-wider">Full Name</th>
+                            <th class="py-3.5 px-6 text-xs font-bold text-indigo-900/80 uppercase tracking-wider">Email Address</th>
+                            <th class="py-3.5 px-6 text-xs font-bold text-indigo-900/80 uppercase tracking-wider">Registration Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="participants-table-body" class="divide-y divide-gray-100">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
             </div>
-
-            <div id="detail-modal-buttons" class="mt-8 flex justify-end gap-3 pt-5 border-t border-gray-100">
-                <!-- Dynamically injected by JS -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end">
+                <button onclick="closeParticipantsModal()" class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm">Close</button>
             </div>
         </div>
     </div>

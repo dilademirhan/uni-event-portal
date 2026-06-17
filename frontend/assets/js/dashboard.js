@@ -790,6 +790,9 @@ async function loadMyEvents() {
                         <span class="mr-2">📍</span> ${e.location}
                     </div>
                 </div>
+                <button onclick="openParticipantsModal(${e.event_id}, event)" class="mt-4 w-full py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center justify-center">
+                    <span class="mr-2 text-lg">👥</span> View Participants (${e.current_capacity || 0}/${e.max_attendees})
+                </button>
             </div>
         </div>
         `;
@@ -1181,4 +1184,69 @@ function openCampusEventModal(eventId) {
     if(!e) return;
     const fmtOpts = { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' };
     openEventDetailsModal(e.title, e.description, e.location, e.category, new Date(e.event_date).toLocaleString([], fmtOpts), new Date(e.event_end_date).toLocaleString([], fmtOpts), e.is_members_only, e.max_attendees, e.creator_name, e.creator_email, false);
+}
+
+// ==========================================
+// PARTICIPANTS MODAL
+// ==========================================
+async function openParticipantsModal(eventId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    const tbody = document.getElementById('participants-table-body');
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-gray-500">Loading participants...</td></tr>`;
+    document.getElementById('participants-modal').classList.remove('hidden');
+
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}/participants`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || "Failed to fetch participants");
+        }
+
+        const participants = await response.json();
+        
+        if (participants.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center py-10">
+                <div class="flex flex-col items-center">
+                    <span class="text-4xl mb-3">👻</span>
+                    <p class="text-gray-500 font-medium">No one has registered for this event yet.</p>
+                </div>
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = participants.map(p => {
+            const regDate = p.registered_at ? new Date(p.registered_at).toLocaleString([], {
+                year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
+            }) : 'Unknown';
+            
+            return `
+            <tr class="hover:bg-indigo-50/20 transition border-b border-gray-100">
+                <td class="py-4 px-6">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm mr-3">
+                            ${p.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="font-bold text-black text-sm">${p.full_name}</span>
+                    </div>
+                </td>
+                <td class="py-4 px-6 text-sm text-black font-medium">${p.email}</td>
+                <td class="py-4 px-6 text-sm text-black font-medium">${regDate}</td>
+            </tr>
+            `;
+        }).join('');
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-red-500 font-bold">Error: ${err.message}</td></tr>`;
+    }
+}
+
+function closeParticipantsModal() {
+    document.getElementById('participants-modal').classList.add('hidden');
 }

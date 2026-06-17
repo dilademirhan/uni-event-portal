@@ -176,7 +176,34 @@ def get_my_events(
     current_user: dict = Depends(security.check_is_manager)
 ):
     user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
-    return db.query(models.Event).filter(models.Event.creator_id == user.user_id).order_by(models.Event.event_date.asc()).all()
+    events = db.query(models.Event).filter(models.Event.creator_id == user.user_id).order_by(models.Event.event_date.asc()).all()
+    
+    result = []
+    for event in events:
+        reg_count = db.query(models.EventRegistration).filter(
+            models.EventRegistration.event_id == event.event_id
+        ).count()
+        
+        event_dict = {
+            "event_id": event.event_id,
+            "club_id": event.club_id,
+            "creator_id": event.creator_id,
+            "title": event.title,
+            "description": event.description,
+            "event_date": event.event_date.isoformat() if event.event_date else None,
+            "event_end_date": event.event_end_date.isoformat() if event.event_end_date else None,
+            "category": event.category,
+            "location": event.location,
+            "is_members_only": event.is_members_only,
+            "approval_status": event.approval_status,
+            "event_state": event.event_state,
+            "max_attendees": event.max_attendees,
+            "creator_name": user.full_name,
+            "creator_email": user.email,
+            "current_capacity": reg_count
+        }
+        result.append(event_dict)
+    return result
 
 @router.get("/upcoming")
 def get_upcoming_events(
@@ -399,3 +426,43 @@ def cancel_event(
     db.commit()
     return {"message": "Event has been cancelled successfully."}
 
+@router.get("/{event_id}/participants")
+def get_event_participants(
+    event_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: dict = Depends(security.check_is_manager)
+):
+    user = db.query(models.User).filter(models.User.email == current_user["email"]).first()
+    event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found.")
+        
+    is_creator = event.creator_id == user.user_id
+    is_manager = db.query(models.ClubManager).filter(
+        models.ClubManager.user_id == user.user_id,
+        models.ClubManager.club_id == event.club_id,
+        models.ClubManager.request_status == 1
+    ).first()
+
+    if not (is_creator or is_manager):
+        raise HTTPException(status_code=403, detail="You do not have permission to view participants for this event.")
+        
+    participants = db.query(
+        models.User.full_name,
+        models.User.email,
+        models.EventRegistration.registered_at
+    ).join(
+        models.EventRegistration, models.User.user_id == models.EventRegistration.user_id
+    ).filter(
+        models.EventRegistration.event_id == event_id
+    ).order_by(models.EventRegistration.registered_at.desc()).all()
+    
+    return [
+        {
+            "full_name": p.full_name,
+            "email": p.email,
+            "registered_at": p.registered_at.isoformat() if p.registered_at else None
+        }
+        for p in participants
+    ]
