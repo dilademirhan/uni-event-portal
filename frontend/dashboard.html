@@ -9,13 +9,17 @@
 <body class="bg-gray-50 flex min-h-screen font-sans text-gray-900">
 
     <aside class="w-64 bg-indigo-950 text-white p-6 hidden md:flex flex-col">
-        <h1 class="text-xl font-bold mb-10 border-b border-indigo-800 pb-4">Arel Portal</h1>
+        <a href="home.html" class="block text-xl font-bold mb-10 border-b border-indigo-800 pb-4 hover:text-indigo-200 transition">Arel Portal</a>
         <div class="mb-10">
             <p id="display-name" class="font-semibold text-lg"></p>
             <p id="display-role" class="text-xs text-indigo-300 uppercase font-bold mt-1"></p>
         </div>
 
         <nav id="sidebar-nav" class="hidden flex-col space-y-2 mb-10">
+            <a href="home.html" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                Home
+            </a>
             <button onclick="switchTab('upcoming-events-view')" id="tab-upcoming-events-view" class="w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 Campus Events

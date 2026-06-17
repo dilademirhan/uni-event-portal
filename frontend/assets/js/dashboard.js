@@ -49,7 +49,13 @@ async function init() {
         loadPendingEvents(); 
     }
 
-    // Set minimum date for event pickers to disable past dates
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && document.getElementById(tabParam)) {
+        switchTab(tabParam);
+    }
+
+
     if (document.getElementById('ev-date') && document.getElementById('ev-end-date')) {
         const nowLocal = new Date();
         const tzOffset = nowLocal.getTimezoneOffset() * 60000;
@@ -946,7 +952,7 @@ async function loadAdminHistory() {
                 <td class="p-4 font-bold text-gray-900 flex items-center gap-2">
                     ${a.applicant_name}
                     <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 rounded-md font-bold border border-indigo-100">
-                        ID: #${a.user_id}
+                        ID: #${a.applicant_id}
                     </span>
                 </td>
                 <td class="p-4 text-gray-700 font-medium">${a.club_name}</td>

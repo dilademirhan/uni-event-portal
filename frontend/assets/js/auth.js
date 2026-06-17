@@ -57,7 +57,7 @@ async function handleLogin(event) {
 
     if (result.ok) {
         localStorage.setItem("access_token", result.data.access_token);
-        window.location.href = "dashboard.html";
+        window.location.href = "home.html";
     } else {
         showError("Invalid email or password.");
     }

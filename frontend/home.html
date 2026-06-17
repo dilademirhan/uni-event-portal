@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Uni-Event | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>.hidden { display: none; }</style>
+</head>
+<body class="bg-gray-50 flex min-h-screen font-sans text-gray-900">
+
+    <aside class="w-64 bg-indigo-950 text-white p-6 hidden md:flex flex-col">
+        <a href="home.html" class="block text-xl font-bold mb-10 border-b border-indigo-800 pb-4 hover:text-indigo-200 transition">Arel Portal</a>
+        <div class="mb-10">
+            <p id="display-name" class="font-semibold text-lg"></p>
+            <p id="display-role" class="text-xs text-indigo-300 uppercase font-bold mt-1"></p>
+        </div>
+
+        <nav id="sidebar-nav" class="hidden flex-col space-y-2 mb-10">
+            <a href="home.html" class="w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                Home
+            </a>
+            <a href="dashboard.html" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Campus Events
+            </a>
+            <a href="dashboard.html" id="tab-manager-view" class="hidden w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path></svg>
+                Manage Events
+            </a>
+            <a href="dashboard.html?tab=student-view" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+                Active Clubs
+            </a>
+            <a href="dashboard.html?tab=my-memberships-view" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                My Memberships
+            </a>
+            <a href="dashboard.html?tab=my-apps-view" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path></svg>
+                My Applications
+            </a>
+            <a href="dashboard.html?tab=my-registrations-view" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                My Registrations
+            </a>
+        </nav>
+
+        <nav id="admin-sidebar-nav" class="hidden flex-col space-y-2 mb-10">
+            <a href="dashboard.html" class="w-full text-left px-4 py-3 rounded-lg bg-indigo-800 text-white font-bold transition flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Pending Requests
+            </a>
+            <a href="dashboard.html" class="w-full text-left px-4 py-3 rounded-lg text-indigo-100 hover:text-white hover:bg-indigo-900 transition font-medium flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Action History
+            </a>
+        </nav>
+
+        <button onclick="logout()" class="mt-auto bg-red-500/10 text-red-400 p-3 rounded-xl hover:bg-red-500 hover:text-white transition">Log Out</button>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-indigo-900 to-indigo-700 rounded-3xl p-10 text-white shadow-xl mb-10 relative overflow-hidden">
+            <div class="relative z-10">
+                <h1 id="welcome-title" class="text-4xl font-bold mb-2">Welcome!</h1>
+                <p id="welcome-subtitle" class="text-indigo-200 text-lg font-medium">Here's what's happening on campus today.</p>
+            </div>
+            <div class="absolute -right-10 -top-10 w-64 h-64 bg-white/10 rounded-full blur-2xl"></div>
+        </div>
+
+        <div id="main-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+            <!-- Events Section -->
+            <section id="events-section">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 id="events-section-title" class="text-2xl font-bold text-indigo-950">Upcoming Events</h2>
+                        <p class="section-subtitle text-sm text-gray-900 font-semibold mt-1">Events starting soon</p>
+                    </div>
+                    <a href="dashboard.html" class="see-all-link text-indigo-600 font-bold text-sm hover:underline">See All Events ➔</a>
+                </div>
+                <div id="events-widget-container" class="space-y-4">
+                    <div class="text-center text-gray-400 py-8">Loading events...</div>
+                </div>
+            </section>
+
+            <!-- Clubs Section (replaced for managers) -->
+            <section id="clubs-section">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 id="clubs-section-title" class="text-2xl font-bold text-indigo-950">Discover Clubs</h2>
+                        <p class="text-sm text-gray-900 font-semibold mt-1">Get involved on campus</p>
+                    </div>
+                    <a href="dashboard.html?tab=student-view" class="text-indigo-600 font-bold text-sm hover:underline">See All Clubs ➔</a>
+                </div>
+                <div id="clubs-widget-container" class="space-y-4">
+                    <div class="text-center text-gray-400 py-8">Loading clubs...</div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/home.js"></script>
+
+    <!-- Join Club Modal -->
+    <div id="join-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b flex justify-between items-center bg-gray-50">
+                <h2 class="text-xl font-bold text-indigo-900">Club Details</h2>
+                <button onclick="closeHomeJoinModal()" class="text-gray-400 hover:text-red-500 transition font-bold text-xl">&times;</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto">
+                <div class="flex justify-center mb-6">
+                    <div id="home-join-modal-logo" class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center text-3xl font-bold text-indigo-600 border-4 border-indigo-50 shadow-inner">A</div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">Club Name</span>
+                        <span id="home-join-modal-name" class="font-bold text-gray-900 mt-1 text-lg"></span>
+                    </div>
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">Category</span>
+                        <span id="home-join-modal-category" class="font-medium text-gray-800 mt-1"></span>
+                    </div>
+                    <div class="flex flex-col border-b pb-3 border-gray-100">
+                        <span class="text-xs font-bold text-indigo-600 uppercase">About</span>
+                        <span id="home-join-modal-desc" class="text-sm text-gray-950 font-medium mt-1 leading-relaxed"></span>
+                    </div>
+                    <div id="home-join-modal-managers" class="space-y-4 pt-2"></div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t bg-gray-50 flex gap-3">
+                <button onclick="closeHomeJoinModal()" class="flex-1 py-3 text-gray-700 font-bold hover:bg-gray-200 rounded-xl transition">Cancel</button>
+                <button id="home-join-modal-confirm-btn" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg">Confirm & Join</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
